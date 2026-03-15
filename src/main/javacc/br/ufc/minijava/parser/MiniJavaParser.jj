@@ -54,6 +54,7 @@ TOKEN : {
 | < PLUS: "+" >
 | < MINUS: "-" >
 | < TIMES: "*" >
+| < DIVIDE: "/" >
 | < AND: "&&" >
 | < NOT: "!" >
 }
@@ -126,7 +127,7 @@ void AdditiveExpression() : {} {
 }
 
 void MultiplicativeExpression() : {} {
-    PrimaryExpression() ( <TIMES> PrimaryExpression() )*
+    PrimaryExpression() ( ( <TIMES> | <DIVIDE> ) PrimaryExpression() )*
 }
 
 void PrimaryExpression() : {} {
