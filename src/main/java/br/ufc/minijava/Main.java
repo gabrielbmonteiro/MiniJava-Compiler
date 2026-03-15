@@ -27,8 +27,12 @@ public class Main {
         } catch (FileNotFoundException e) {
             System.out.println("Erro: Ficheiro nao encontrado - " + args[0]);
         } catch (ParseException e) {
-            System.out.println("Erro Lexico ou Sintatico encontrado:");
-            System.out.println(e.getMessage());
+            System.out.println("--------------------------------------------------");
+            System.out.println("ERRO SINTATICO DETECTADO");
+            System.out.println("Linha: " + e.currentToken.next.beginLine);
+            System.out.println("Coluna: " + e.currentToken.next.beginColumn);
+            System.out.println("Esperava-se um dos seguintes: " + e.tokenImage[e.expectedTokenSequences[0][0]]);
+            System.out.println("--------------------------------------------------");
         }
     }
 }
