@@ -9,7 +9,11 @@ echo "------------------------------------------"
 echo "Iniciando Bateria de Testes"
 echo "------------------------------------------"
 
-mkdir -p test_results
+if [ -d "test_results" ]; then
+    rm -rf test_results/*
+else
+    mkdir -p test_results
+fi
 
 for file in ../samples/*.java
 do

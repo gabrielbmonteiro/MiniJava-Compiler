@@ -11,7 +11,9 @@ Write-Host "------------------------------------------" -ForegroundColor Yellow
 Write-Host "Iniciando Bateria de Testes" -ForegroundColor Yellow
 Write-Host "------------------------------------------" -ForegroundColor Yellow
 
-if (!(Test-Path "test_results")) {
+if (Test-Path "test_results") {
+    Remove-Item -Path "test_results/*" -Force -ErrorAction SilentlyContinue
+} else {
     New-Item -ItemType Directory -Path "test_results" | Out-Null
 }
 
