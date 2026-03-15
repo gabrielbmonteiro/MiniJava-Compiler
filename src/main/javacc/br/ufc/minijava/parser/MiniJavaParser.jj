@@ -16,7 +16,8 @@ SKIP : {
 | "\t"
 | "\n"
 | "\r"
-// TODO: Adicionar regras para ignorar comentários (// e /* */)
+| < "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n") >             // Comentário de linha
+| < "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/" > // Comentário de bloco
 }
 
 /* 2. ANÁLISE LÉXICA: PALAVRAS RESERVADAS E OPERADORES */
@@ -63,8 +64,61 @@ TOKEN : {
 | < INTEGER_LITERAL: ( ["0"-"9"] )+ >
 }
 
-/* 4. ANÁLISE SINTÁTICA: PONTO DE PARTIDA (Exemplo inicial) */
-// TODO: Substituir pelas regras reais do MiniJava (Apêndice do livro do Appel)
+/* 4. ANÁLISE SINTÁTICA: PONTO DE PARTIDA */
+// TODO: Substituir pelas regras do MiniJava (livro do Appel)
 void Program() : {} {
   ( <CLASS> <ID> <LBRACE> <RBRACE> )* <EOF>
+}
+
+void Statement() : {} {
+    <LBRACE> ( Statement() )* <RBRACE>
+  | <IF> <LPAREN> Expression() <RPAREN> Statement() <ELSE> Statement()
+  | <WHILE> <LPAREN> Expression() <RPAREN> Statement()
+  | <PRINT> <LPAREN> Expression() <RPAREN> <SEMICOLON>
+  | LOOKAHEAD(2) <ID> <ASSIGN> Expression() <SEMICOLON>
+  | <ID> <LSQPAREN> Expression() <RSQPAREN> <ASSIGN> Expression() <SEMICOLON>
+}
+
+void Expression() : {} {
+    AndExpression()
+}
+
+void AndExpression() : {} {
+    LessExpression() ( <AND> LessExpression() )*
+}
+
+void LessExpression() : {} {
+    AdditiveExpression() ( <LT> AdditiveExpression() )*
+}
+
+void AdditiveExpression() : {} {
+    MultiplicativeExpression() ( ( <PLUS> | <MINUS> ) MultiplicativeExpression() )*
+}
+
+void MultiplicativeExpression() : {} {
+    PrimaryExpression() ( <TIMES> PrimaryExpression() )*
+}
+
+void PrimaryExpression() : {} {
+  (
+      <INTEGER_LITERAL>
+    | <TRUE>
+    | <FALSE>
+    | <ID>
+    | <THIS>
+    | LOOKAHEAD(3) <NEW> <INT> <LSQPAREN> Expression() <RSQPAREN>
+    | <NEW> <ID> <LPAREN> <RPAREN>
+    | <NOT> Expression()
+    | <LPAREN> Expression() <RPAREN>
+  )
+  (
+    // Sufixos que podem se repetir: a.metodo().outro[0]
+    <LSQPAREN> Expression() <RSQPAREN>
+    | LOOKAHEAD(2) <DOT> <ID> <LPAREN> [ ExpressionList() ] <RPAREN>
+    | <DOT> "length"
+  )*
+}
+
+void ExpressionList() : {} {
+    Expression() ( <COMMA> Expression() )*
 }
