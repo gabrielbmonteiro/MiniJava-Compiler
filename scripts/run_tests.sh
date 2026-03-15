@@ -2,7 +2,7 @@
 
 cd "$(dirname "$0")"
 
-echo -e "\nCompilando o projeto..."
+echo -e "\n[\e[34mINFO\e[0m] Compilando o projeto..."
 mvn -f ../pom.xml compile -q
 
 echo "------------------------------------------"
@@ -20,9 +20,11 @@ do
     filename=$(basename "$file")
     echo -n "Testando: $filename... "
 
-    mvn -f ../pom.xml exec:java -q "-Dexec.mainClass=br.ufc.minijava.Main" "-Dexec.args=../samples/$filename" > "test_results/$filename.log" 2>&1
+    output=$(mvn -f ../pom.xml exec:java -q "-Dexec.mainClass=br.ufc.minijava.Main" "-Dexec.args=../samples/$filename" 2>&1)
 
-    if grep -qi "sucesso" "test_results/$filename.log"; then
+    echo "$output" > "test_results/$filename.log"
+
+    if echo "$output" | grep -qi "sucesso"; then
         passou=true
     else
         passou=false
@@ -38,10 +40,10 @@ do
         if [ "$passou" = true ]; then
             echo -e "[\e[32mOK\e[0m] (Sucesso)"
         else
-            echo -e "[\e[31mFALHA\e[0m] (Devia passar)"
+            echo -e "[\e[31mFALHA\e[0m] (Deu erro indevido)"
         fi
     fi
 done
 
 echo "------------------------------------------"
-echo "Logs gerados em: scripts/test_results/"
+echo "Logs limpos e gerados em: scripts/test_results/"

@@ -1,4 +1,3 @@
-# Garante que o script rode a partir da pasta onde ele está
 Set-Location $PSScriptRoot
 
 [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding(850)
@@ -22,12 +21,11 @@ foreach ($file in $files) {
     $fileName = $file.Name
     Write-Host "Testando: $fileName... " -NoNewline
 
-    # Executa apontando para o pom na raiz e os arquivos na samples
-    $rawOutput = mvn -f ../pom.xml exec:java -q "-Dexec.mainClass=br.ufc.minijava.Main" "-Dexec.args=../samples/$fileName" 2>&1
-    $cleanOutput = $rawOutput | Out-String
+    $cleanOutput = cmd /c "mvn -f ../pom.xml exec:java -q -Dexec.mainClass=br.ufc.minijava.Main -Dexec.args=../samples/$fileName 2>&1" | Out-String
+
     $cleanOutput | Out-File "test_results/$fileName.log" -Encoding utf8
 
-    $passou = $cleanOutput -match "sucesso"
+    $passou = $cleanOutput.Contains("sucesso")
 
     if ($fileName -match "Erro") {
         if (-not $passou) {
