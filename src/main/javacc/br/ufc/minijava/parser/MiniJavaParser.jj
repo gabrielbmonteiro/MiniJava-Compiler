@@ -1,0 +1,70 @@
+options {
+  JAVA_UNICODE_ESCAPE = true;
+}
+
+PARSER_BEGIN(MiniJavaParser)
+
+package br.ufc.minijava.parser;
+
+  public class MiniJavaParser {}
+
+PARSER_END(MiniJavaParser)
+
+/* 1. ANÁLISE LÉXICA: CARACTERES IGNORADOS */
+SKIP : {
+  " "
+| "\t"
+| "\n"
+| "\r"
+// TODO: Adicionar regras para ignorar comentários (// e /* */)
+}
+
+/* 2. ANÁLISE LÉXICA: PALAVRAS RESERVADAS E OPERADORES */
+TOKEN : {
+  < CLASS: "class" >
+| < PUBLIC: "public" >
+| < STATIC: "static" >
+| < VOID: "void" >
+| < MAIN: "main" >
+| < STRING: "String" >
+| < EXTENDS: "extends" >
+| < RETURN: "return" >
+| < INT: "int" >
+| < BOOLEAN: "boolean" >
+| < IF: "if" >
+| < ELSE: "else" >
+| < WHILE: "while" >
+| < PRINT: "System.out.println" >
+| < TRUE: "true" >
+| < FALSE: "false" >
+| < THIS: "this" >
+| < NEW: "new" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < LPAREN: "(" >
+| < RPAREN: ")" >
+| < LSQPAREN: "[" >
+| < RSQPAREN: "]" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+| < ASSIGN: "=" >
+| < LT: "<" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < TIMES: "*" >
+| < AND: "&&" >
+| < NOT: "!" >
+}
+
+/* 3. ANÁLISE LÉXICA: IDENTIFICADORES E NÚMEROS */
+TOKEN : {
+  < ID: ["a"-"z","A"-"Z"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+| < INTEGER_LITERAL: ( ["0"-"9"] )+ >
+}
+
+/* 4. ANÁLISE SINTÁTICA: PONTO DE PARTIDA (Exemplo inicial) */
+// TODO: Substituir pelas regras reais do MiniJava (Apêndice do livro do Appel)
+void Program() : {} {
+  ( <CLASS> <ID> <LBRACE> <RBRACE> )* <EOF>
+}
