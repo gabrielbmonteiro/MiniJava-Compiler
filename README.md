@@ -25,6 +25,22 @@ Para processar um ficheiro MiniJava específico, utilize o plugin exec-maven-plu
 ```bash
     mvn exec:java "-Dexec.mainClass=br.ufc.minijava.Main" "-Dexec.args=samples/Teste.java"
 ```
+## 🧪 Testes Automatizados
+Para rodar toda a bateria de testes de uma vez e gerar logs de erro/sucesso:
+
+### (Linux/Mac/Git Bash)
+```bash
+    chmod +x scripts/run_tests.sh
+    ./scripts/run_tests.sh
+```
+### (Windows PowerShell)
+```bash
+    .\scripts\run_tests.ps1
+```
+
+
+Os resultados detalhados de cada arquivo serão salvos na pasta `test_results/`.
+
 
 ## 🛠️ Tecnologias Utilizadas
 * JavaCC: Gerador de analisadores sintáticos e léxicos.

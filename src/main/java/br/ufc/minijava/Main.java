@@ -22,7 +22,7 @@ public class Main {
             // Chama a regra inicial da sua gramática (Program)
             parser.Program();
 
-            System.out.println("Análise concluída com sucesso! Nenhum erro léxico ou sintático.");
+            System.out.println("Analise concluida com sucesso! Nenhum erro lexico ou sintatico.");
 
         } catch (FileNotFoundException e) {
             System.out.println("Erro: Ficheiro não encontrado - " + args[0]);

@@ -14,3 +14,5 @@ Thumbs.db
 
 # === LOGS ===
 *.log
+scripts/test_results/
+test_results/

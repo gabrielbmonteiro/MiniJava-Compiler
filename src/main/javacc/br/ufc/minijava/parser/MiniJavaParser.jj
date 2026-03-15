@@ -64,10 +64,40 @@ TOKEN : {
 | < INTEGER_LITERAL: ( ["0"-"9"] )+ >
 }
 
-/* 4. ANÁLISE SINTÁTICA: PONTO DE PARTIDA */
+/* 4. ANÁLISE SINTÁTICA */
 // TODO: Substituir pelas regras do MiniJava (livro do Appel)
+
 void Program() : {} {
-  ( <CLASS> <ID> <LBRACE> <RBRACE> )* <EOF>
+  MainClass() ( ClassDeclaration() )* <EOF>
+}
+
+void MainClass() : {} {
+  <CLASS> <ID> <LBRACE>
+    <PUBLIC> <STATIC> <VOID> <MAIN> <LPAREN> <STRING> <LSQPAREN> <RSQPAREN> <ID> <RPAREN>
+    <LBRACE> Statement() <RBRACE>
+  <RBRACE>
+}
+
+void ClassDeclaration() : {} {
+  <CLASS> <ID> [ <EXTENDS> <ID> ] <LBRACE> ( VarDeclaration() )* ( MethodDeclaration() )* <RBRACE>
+}
+
+// detalhar melhor depois:
+void VarDeclaration() : {} {
+  Type() <ID> <SEMICOLON>
+}
+
+void MethodDeclaration() : {} {
+  <PUBLIC> Type() <ID> <LPAREN> [ FormalList() ] <RPAREN>
+  <LBRACE> ( LOOKAHEAD(2) VarDeclaration() )* ( Statement() )* <RETURN> Expression() <SEMICOLON> <RBRACE>
+}
+
+void FormalList() : {} {
+  Type() <ID> ( <COMMA> Type() <ID> )*
+}
+
+void Type() : {} {
+  LOOKAHEAD(2) <INT> <LSQPAREN> <RSQPAREN> | <BOOLEAN> | <INT> | <ID>
 }
 
 void Statement() : {} {
@@ -120,5 +150,5 @@ void PrimaryExpression() : {} {
 }
 
 void ExpressionList() : {} {
-    Expression() ( <COMMA> Expression() )*
+  Expression() ( <COMMA> Expression() )*
 }
