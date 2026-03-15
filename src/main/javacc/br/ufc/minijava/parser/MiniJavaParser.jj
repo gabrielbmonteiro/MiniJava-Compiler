@@ -83,7 +83,6 @@ void ClassDeclaration() : {} {
   <CLASS> <ID> [ <EXTENDS> <ID> ] <LBRACE> ( VarDeclaration() )* ( MethodDeclaration() )* <RBRACE>
 }
 
-// detalhar melhor depois:
 void VarDeclaration() : {} {
   Type() <ID> <SEMICOLON>
 }
