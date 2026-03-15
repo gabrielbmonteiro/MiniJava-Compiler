@@ -12,7 +12,7 @@ Repositório destinado ao desenvolvimento do compilador para a linguagem MiniJav
 
 ### Pré-requisitos
 * Java JDK 17 ou superior.
-* Maven 3.6 ou superior instalado e configurado no PATH.
+* Maven 3.6 ou superior.
 
 ### 1. Compilar e Gerar o Parser
 Sempre que houver alterações no ficheiro `.jj` ou no código Java, execute o comando abaixo para garantir que o projeto seja reconstruído:
