@@ -1,6 +1,6 @@
 # MiniJava Compiler - Equipe 02
 
-Repositório destinado ao desenvolvimento do compilador para a linguagem MiniJava, como parte dos requisitos da disciplina de Compiladores.
+Repositório destinado ao desenvolvimento do compilador para a linguagem MiniJava, como trabalho da disciplina de Compiladores.
 
 ## 📁 Estrutura do Projeto
 
