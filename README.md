@@ -17,13 +17,20 @@ O programa foi testado utilizando uma bateria de testes automatizada que inclui:
 * **ErroSintatico.java / ErroLexico.java:** Entradas propositalmente incorretas para validar a robustez do tratamento de erros.
 
 ### 3. Erros de Execução Encontrados
-Durante o desenvolvimento, foram identificados e corrigidos:
-* **Conflitos de Lookahead:** O parser confundia atribuições simples (`a = 1`) com atribuições de array (`a[0] = 1`). Resolvido com `LOOKAHEAD(2)`.
-* **Omissão de Operadores:** Inicialmente, o operador de divisão `/` não estava na gramática, causando erro léxico em expressões matemáticas complexas.
-* **Atributo Length:** O parser esperava parênteses em `.length()`, mas foi ajustado para aceitar a forma de atributo `.length` conforme a especificação.
+Durante o desenvolvimento e a passagem pela bateria de testes, foram identificados e corrigidos os seguintes problemas:
+
+* **Conflito Léxico/Sintático no Atributo `.length`:** O parser lançava um erro (`Esperava-se: "("`) ao ler `lista.length`. A causa foi que o Analisador Léxico interpretava "length" como um `<ID>` comum, o que forçava o parser a entrar na regra de chamada de métodos (`<DOT> <ID> <LPAREN> ...`). 
+  * **Resolução:** Criação de um token reservado `<LENGTH>` com precedência sobre `<ID>` e ajuste na regra `PrimaryExpression()` para aceitar `<DOT> <LENGTH>` sem exigir parênteses.
+* **Ambiguidade de Atribuição (Shift-Reduce equivalente):** O parser falhava ao distinguir uma atribuição simples (`x = 1`) de uma atribuição de array (`x[0] = 1`), pois ambas começam com o token `<ID>`. 
+  * **Resolução:** Implementação de `LOOKAHEAD(2)` na regra de `Statement()` para forçar o parser a "espiar" o próximo token (`=` ou `[`) antes de tomar a decisão de derivação.
+* **Omissão de Operadores Aritméticos:** A gramática base do MiniJava não cobre nativamente o operador de divisão (`/`). 
+  * **Resolução:** O token `<DIVIDE>` foi adicionado manualmente e integrado ao nível correto de precedência na regra `MultiplicativeExpression()`.
 
 ### 4. Dificuldades Encontradas
-A maior dificuldade foi configurar a **precedência de operadores** e resolver ambiguidades sintáticas sem causar recursão infinita no **JavaCC**.
+As principais barreiras técnicas enfrentadas nesta etapa foram:
+
+* **Adaptação para Gramática LL(k):** O JavaCC utiliza análise preditiva descendente. O maior desafio foi reescrever regras que naturalmente teriam "recursão à esquerda" (como as regras de precedência matemática) para uma abordagem iterativa (usando o fecho de Kleene `*`), evitando loops infinitos no compilador.
+* **Encadeamento de Sufixos em Expressões:** Modelar a gramática para suportar encadeamentos complexos na mesma linha (ex: `objeto.metodo()[0].length`) exigiu um refinamento na regra `PrimaryExpression()`, garantindo que os sufixos de acesso a arrays, chamadas de métodos e o atributo de tamanho não entrassem em conflito sintático.
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela arquitetura do parser no JavaCC, definição da gramática, resolução de conflitos de precedência via `LOOKAHEAD` e criação da infraestrutura de build com Maven e dos scripts de automação de testes.
