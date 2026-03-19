@@ -57,6 +57,7 @@ TOKEN : {
 | < DIVIDE: "/" >
 | < AND: "&&" >
 | < NOT: "!" >
+| < LENGTH: "length" >
 }
 
 /* 3. ANÁLISE LÉXICA: IDENTIFICADORES E NÚMEROS */
@@ -138,14 +139,14 @@ void PrimaryExpression() : {} {
     | <THIS>
     | LOOKAHEAD(3) <NEW> <INT> <LSQPAREN> Expression() <RSQPAREN>
     | <NEW> <ID> <LPAREN> <RPAREN>
-    | <NOT> Expression()
+    | <NOT> PrimaryExpression()
     | <LPAREN> Expression() <RPAREN>
   )
   (
     // Sufixos que podem se repetir: a.metodo().outro[0]
     <LSQPAREN> Expression() <RSQPAREN>
     | LOOKAHEAD(2) <DOT> <ID> <LPAREN> [ ExpressionList() ] <RPAREN>
-    | <DOT> "length"
+    | <DOT> <LENGTH>
   )*
 }
 
