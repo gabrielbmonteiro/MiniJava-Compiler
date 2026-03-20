@@ -33,7 +33,7 @@ As principais barreiras técnicas enfrentadas nesta etapa foram:
 * **Encadeamento de Sufixos em Expressões:** Modelar a gramática para suportar encadeamentos complexos na mesma linha (ex: `objeto.metodo()[0].length`) exigiu um refinamento na regra `PrimaryExpression()`, garantindo que os sufixos de acesso a arrays, chamadas de métodos e o atributo de tamanho não entrassem em conflito sintático.
 
 ### 5. Participação da Equipe
-* **Gabriel Batista Monteiro:** Responsável pela arquitetura do parser no JavaCC, definição da gramática, resolução de conflitos de precedência via `LOOKAHEAD` e criação da infraestrutura de build com Maven e dos scripts de automação de testes.
+* **Gabriel Batista Monteiro:** Responsável pela arquitetura do parser no JavaCC, definição da gramática, resolução de conflitos de precedência via `LOOKAHEAD` e criação dos scripts de automação de testes.
 * **Albert Moren Paulino da Anunciação:** [A preencher pelo membro]
 * **Antônio Kevin Carvalho Primo:** [A preencher pelo membro]
 
