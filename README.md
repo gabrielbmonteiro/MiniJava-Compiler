@@ -1,6 +1,6 @@
 # MiniJava Compiler - Equipe 02
 
-Este repositório contém a implementação do front-end de um compilador para a linguagem **MiniJava**, desenvolvido para a disciplina de Compiladores. A fase atual contempla a **Análise Léxica e a Análise Sintática (N1)**.
+Este repositório contém a implementação de um compilador para a linguagem **MiniJava**, desenvolvido para a disciplina de Compiladores. A fase atual contempla a **Análise Léxica e a Análise Sintática (N1)**.
 
 ## 📋 Relatório de Conclusão - Etapa N1
 
@@ -34,8 +34,8 @@ As principais barreiras técnicas enfrentadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela arquitetura do parser no JavaCC, definição da gramática, resolução de conflitos de precedência via `LOOKAHEAD` e criação dos scripts de automação de testes.
-* **Albert Moren Paulino da Anunciação:** [A preencher pelo membro]
-* **Antônio Kevin Carvalho Primo:** [A preencher pelo membro]
+* **Albert Moren Paulino da Anunciação:** [A preencher]
+* **Antônio Kevin Carvalho Primo:** [A preencher]
 
 ## 🚀 Como Executar o Projeto
 
