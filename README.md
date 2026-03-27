@@ -34,8 +34,8 @@ As principais barreiras técnicas enfrentadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela arquitetura do parser no JavaCC, definição da gramática, resolução de conflitos de precedência via `LOOKAHEAD` e criação dos scripts de automação de testes.
-* **Albert Moren Paulino da Anunciação:** [A preencher]
-* **Antônio Kevin Carvalho Primo:** [A preencher]
+* **Albert Moren Paulino da Anunciação:** Verificação e realização dos testes
+* **Antônio Kevin Carvalho Primo:** Revisão da definição da gramática 
 
 ## 🚀 Como Executar o Projeto
 
