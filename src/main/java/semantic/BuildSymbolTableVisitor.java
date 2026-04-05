@@ -6,20 +6,19 @@ import symbol.Table;
 import symbol.Symbol;
 
 public class BuildSymbolTableVisitor extends DepthFirstVisitor {
-
     private final Table symbolTable;
     private String currClass = null;
     private String currMethod = null;
+    private int quantidadeErros = 0;
 
     public BuildSymbolTableVisitor() {
         this.symbolTable = new Table();
     }
 
-    public Table getTable() {
-        return this.symbolTable;
-    }
+    public Table getTable() { return this.symbolTable; }
+    public int getQuantidadeErros() { return quantidadeErros; }
 
-    // 1. Visita a classe principal (Main)
+    // --- CLASSES ---
     @Override
     public void visit(MainClass n) {
         currClass = n.i1.s;
@@ -27,68 +26,83 @@ public class BuildSymbolTableVisitor extends DepthFirstVisitor {
 
         symbolTable.put(Symbol.symbol(currClass), n);
         symbolTable.put(Symbol.symbol(currClass + "." + currMethod + "." + n.i2.s), new IdentifierType("String[]"));
-
         super.visit(n);
-
         currClass = null;
         currMethod = null;
     }
 
-    // 2. Visita uma Classe sem herança
     @Override
     public void visit(ClassDeclSimple n) {
         currClass = n.i.s;
-
+        if (symbolTable.get(Symbol.symbol(currClass)) != null) {
+            System.err.println("Erro Semantico: Classe '" + currClass + "' duplicada.");
+            quantidadeErros++;
+        }
         symbolTable.put(Symbol.symbol(currClass), n);
-
         super.visit(n);
-
         currClass = null;
     }
 
-    // 3. Visita uma Classe com Herança
     @Override
     public void visit(ClassDeclExtends n) {
         currClass = n.i.s;
-
+        if (symbolTable.get(Symbol.symbol(currClass)) != null) {
+            System.err.println("Erro Semantico: Classe '" + currClass + "' duplicada.");
+            quantidadeErros++;
+        }
         symbolTable.put(Symbol.symbol(currClass), n);
         symbolTable.put(Symbol.symbol(currClass + ".extends"), n.j.s);
-
         super.visit(n);
-
         currClass = null;
     }
 
-    // 4. Visita as declarações de Métodos
+    // --- Metodos---
     @Override
     public void visit(MethodDecl n) {
-        currMethod = n.i.s;
+        String methodName = n.i.s;
+        String key = currClass + "." + methodName;
 
-        symbolTable.put(Symbol.symbol(currClass + "." + currMethod), n);
-        symbolTable.put(Symbol.symbol(currClass + "." + currMethod + ".returnType"), n.t);
+        if (symbolTable.get(Symbol.symbol(key)) != null) {
+            System.err.println("Erro Semantico: Metodo '" + methodName + "' duplicado na classe " + currClass);
+            quantidadeErros++;
+        }
 
+        // Salva o metodo e seu tipo de retorno
+        symbolTable.put(Symbol.symbol(key), n);
+        symbolTable.put(Symbol.symbol(key + ".returnType"), n.t);
+
+        // Salva os argumentos
+        int numArgs = (n.fl != null) ? n.fl.size() : 0;
+        symbolTable.put(Symbol.symbol(key + ".numArgs"), Integer.valueOf(numArgs));
+
+        for (int i = 0; i < numArgs; i++) {
+            Formal arg = n.fl.elementAt(i);
+            symbolTable.put(Symbol.symbol(key + ".arg." + i), arg.t);
+        }
+
+        currMethod = methodName;
         super.visit(n);
-
         currMethod = null;
     }
 
-    // 5. Visita a Declaração de Variáveis
+    // --- VARIÁVEIS E PARÂMETROS ---
     @Override
     public void visit(VarDecl n) {
-        if (currMethod != null) {
-            symbolTable.put(Symbol.symbol(currClass + "." + currMethod + "." + n.i.s), n.t);
-        } else {
-            symbolTable.put(Symbol.symbol(currClass + "." + n.i.s), n.t);
-        }
+        String varName = n.i.s;
+        String key = (currMethod != null) ? currClass + "." + currMethod + "." + varName : currClass + "." + varName;
 
-        super.visit(n);
+        if (symbolTable.get(Symbol.symbol(key)) != null) {
+            System.err.println("Erro Semantico: Variavel '" + varName + "' ja declarada neste escopo.");
+            quantidadeErros++;
+        }
+        symbolTable.put(Symbol.symbol(key), n.t);
     }
 
-    // 6. Visita os Parâmetros dos Métodos
     @Override
     public void visit(Formal n) {
-        symbolTable.put(Symbol.symbol(currClass + "." + currMethod + "." + n.i.s), n.t);
-
-        super.visit(n);
+        // Parâmetros são tratados como variáveis locais do metodo
+        String key = currClass + "." + currMethod + "." + n.i.s;
+        symbolTable.put(Symbol.symbol(key), n.t);
     }
+
 }

@@ -7,46 +7,59 @@ import symbol.Symbol;
 
 public class TypeCheckVisitor extends TypeDepthFirstVisitor {
 
-    private final Table symbolTable;
+    private Table symbolTable;
     private String currClass = null;
     private String currMethod = null;
+    private int quantidadeErros = 0;
 
     public TypeCheckVisitor(Table st) {
         this.symbolTable = st;
     }
 
-    // Procura o tipo de uma variável na tabela
-    private Type getVarType(String varName) {
+    public int getQuantidadeErros() {
+        return quantidadeErros;
+    }
+
+    private void reportError(String message) {
+        System.err.println("Erro Semantico: " + message);
+        quantidadeErros++;
+    }
+
+    // Auxiliares de checagem p/ evitar problemas com múltiplas instâncias de classes de tipo
+    private boolean isInt(Type t) { return t != null && t.getClass().getSimpleName().equals("IntegerType"); }
+    private boolean isBool(Type t) { return t != null && t.getClass().getSimpleName().equals("BooleanType"); }
+    private boolean isIntArray(Type t) { return t != null && t.getClass().getSimpleName().equals("IntArrayType"); }
+
+    private Type getVarType(String id) {
         Type t = null;
         if (currMethod != null) {
-            // Tenta achar no escopo do método (Local ou Parâmetro)
-            t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + currMethod + "." + varName));
+            t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + currMethod + "." + id));
         }
-        if (t == null && currClass != null) {
-            // Tenta achar no escopo da classe (Atributo)
-            t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + varName));
+        if (t == null) {
+            t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + id));
         }
         return t;
     }
 
-    // Verifica se dois tipos são compatíveis
-    private boolean checkTypeMatch(Type t1, Type t2) {
+    private boolean isCompatible(Type t1, Type t2) {
         if (t1 == null || t2 == null) return false;
-        if (t1 instanceof IntegerType && t2 instanceof IntegerType) return true;
-        if (t1 instanceof BooleanType && t2 instanceof BooleanType) return true;
-        if (t1 instanceof IntArrayType && t2 instanceof IntArrayType) return true;
-        if (t1 instanceof IdentifierType && t2 instanceof IdentifierType) {
-            return ((IdentifierType) t1).s.equals(((IdentifierType) t2).s);
+        String n1 = t1.getClass().getSimpleName();
+        String n2 = t2.getClass().getSimpleName();
+        if (n1.equals(n2)) {
+            if (t1 instanceof IdentifierType && t2 instanceof IdentifierType) {
+                return ((IdentifierType) t1).s.equals(((IdentifierType) t2).s);
+            }
+            return true;
         }
         return false;
     }
 
-    // CONTROLO DE CONTEXTO
+    // ESTRUTURA E ESCOPO
     @Override
     public Type visit(MainClass n) {
         currClass = n.i1.s;
         currMethod = "main";
-        super.visit(n);
+        n.s.accept(this);
         currClass = null;
         currMethod = null;
         return null;
@@ -55,7 +68,7 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(ClassDeclSimple n) {
         currClass = n.i.s;
-        super.visit(n);
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
         currClass = null;
         return null;
     }
@@ -63,7 +76,7 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(ClassDeclExtends n) {
         currClass = n.i.s;
-        super.visit(n);
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
         currClass = null;
         return null;
     }
@@ -71,25 +84,37 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(MethodDecl n) {
         currMethod = n.i.s;
-        super.visit(n);
-
-        // Verifica se o tipo da expressão do 'return' bate com o tipo de retorno declarado do método
+        for (int i = 0; i < n.sl.size(); i++) n.sl.elementAt(i).accept(this);
         Type returnExpType = n.e.accept(this);
-        if (!checkTypeMatch(n.t, returnExpType)) {
-            System.err.println("Erro Semântico [" + currClass + "." + currMethod + "]: O tipo de retorno não corresponde ao declarado.");
+        if (!isCompatible(n.t, returnExpType)) {
+            reportError("Tipo de retorno incompativel no metodo '" + n.i.s + "'.");
         }
-
         currMethod = null;
         return null;
     }
 
-    // VALIDAÇÃO DE STATEMENTS
+    // STATEMENTS
+    @Override
+    public Type visit(Assign n) {
+        Type tVar = getVarType(n.i.s);
+        Type tExp = n.e.accept(this);
+        if (tVar == null) reportError("Variavel '" + n.i.s + "' nao declarada.");
+        else if (!isCompatible(tVar, tExp)) reportError("Tipo incompativel na atribuição para '" + n.i.s + "'.");
+        return null;
+    }
+
+    @Override
+    public Type visit(ArrayAssign n) {
+        Type tVar = getVarType(n.i.s);
+        if (!isIntArray(tVar)) reportError("Variavel '" + n.i.s + "' nao eh um array.");
+        if (!isInt(n.e1.accept(this))) reportError("Indice do array deve ser inteiro.");
+        if (!isInt(n.e2.accept(this))) reportError("Valor atribuido ao array deve ser inteiro.");
+        return null;
+    }
+
     @Override
     public Type visit(If n) {
-        Type cond = n.e.accept(this);
-        if (!(cond instanceof BooleanType)) {
-            System.err.println("Erro Semântico: A condição do 'if' deve ser booleana.");
-        }
+        if (!isBool(n.e.accept(this))) reportError("Condicao do 'if' deve ser booleana.");
         n.s1.accept(this);
         n.s2.accept(this);
         return null;
@@ -97,211 +122,127 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
 
     @Override
     public Type visit(While n) {
-        Type cond = n.e.accept(this);
-        if (!(cond instanceof BooleanType)) {
-            System.err.println("Erro Semântico: A condição do 'while' deve ser booleana.");
-        }
+        if (!isBool(n.e.accept(this))) reportError("Condicao do 'while' deve ser booleana.");
         n.s.accept(this);
         return null;
     }
 
     @Override
     public Type visit(Print n) {
-        Type exp = n.e.accept(this);
-        if (!(exp instanceof IntegerType)) {
-            System.err.println("Erro Semântico: System.out.println requer uma expressão inteira.");
-        }
+        if (!isInt(n.e.accept(this))) reportError("System.out.println exige um inteiro.");
         return null;
     }
 
-    @Override
-    public Type visit(Assign n) {
-        Type varType = getVarType(n.i.s);
-        if (varType == null) {
-            System.err.println("Erro Semântico: A variável '" + n.i.s + "' não foi declarada.");
-            return null;
-        }
-        Type expType = n.e.accept(this);
-        if (!checkTypeMatch(varType, expType)) {
-            System.err.println("Erro Semântico: Tipo incompatível na atribuição para '" + n.i.s + "'.");
-        }
-        return null;
-    }
-
-    @Override
-    public Type visit(ArrayAssign n) {
-        Type varType = getVarType(n.i.s);
-        if (!(varType instanceof IntArrayType)) {
-            System.err.println("Erro Semântico: A variável '" + n.i.s + "' não é um array de inteiros.");
-        }
-        Type indexType = n.e1.accept(this);
-        Type valueType = n.e2.accept(this);
-
-        if (!(indexType instanceof IntegerType)) {
-            System.err.println("Erro Semântico: O índice do array deve ser um inteiro.");
-        }
-        if (!(valueType instanceof IntegerType)) {
-            System.err.println("Erro Semântico: O valor atribuído ao array deve ser um inteiro.");
-        }
-        return null;
-    }
-
-    // VALIDAÇÃO DE EXPRESSÕES
+    // EXPRESSÕES
     @Override
     public Type visit(Plus n) {
-        Type t1 = n.e1.accept(this);
-        Type t2 = n.e2.accept(this);
-        if (!(t1 instanceof IntegerType) || !(t2 instanceof IntegerType)) {
-            System.err.println("Erro Semântico: Os operandos do '+' devem ser inteiros.");
-        }
+        if (!isInt(n.e1.accept(this)) || !isInt(n.e2.accept(this))) reportError("Operandos de '+' devem ser inteiros.");
         return new IntegerType();
     }
 
     @Override
     public Type visit(Minus n) {
-        Type t1 = n.e1.accept(this);
-        Type t2 = n.e2.accept(this);
-        if (!(t1 instanceof IntegerType) || !(t2 instanceof IntegerType)) {
-            System.err.println("Erro Semântico: Os operandos do '-' devem ser inteiros.");
-        }
+        if (!isInt(n.e1.accept(this)) || !isInt(n.e2.accept(this))) reportError("Operandos de '-' devem ser inteiros.");
         return new IntegerType();
     }
 
     @Override
     public Type visit(Times n) {
-        Type t1 = n.e1.accept(this);
-        Type t2 = n.e2.accept(this);
-        if (!(t1 instanceof IntegerType) || !(t2 instanceof IntegerType)) {
-            System.err.println("Erro Semântico: Os operandos do '*' devem ser inteiros.");
-        }
+        if (!isInt(n.e1.accept(this)) || !isInt(n.e2.accept(this))) reportError("Operandos de '*' devem ser inteiros.");
         return new IntegerType();
     }
 
     @Override
     public Type visit(LessThan n) {
-        Type t1 = n.e1.accept(this);
-        Type t2 = n.e2.accept(this);
-        if (!(t1 instanceof IntegerType) || !(t2 instanceof IntegerType)) {
-            System.err.println("Erro Semântico: Os operandos do '<' devem ser inteiros.");
-        }
+        if (!isInt(n.e1.accept(this)) || !isInt(n.e2.accept(this))) reportError("Operandos de '<' devem ser inteiros.");
         return new BooleanType();
     }
 
     @Override
     public Type visit(And n) {
-        Type t1 = n.e1.accept(this);
-        Type t2 = n.e2.accept(this);
-        if (!(t1 instanceof BooleanType) || !(t2 instanceof BooleanType)) {
-            System.err.println("Erro Semântico: Os operandos do '&&' devem ser booleanos.");
-        }
+        if (!isBool(n.e1.accept(this)) || !isBool(n.e2.accept(this))) reportError("Operandos de '&&' devem ser booleanos.");
         return new BooleanType();
     }
 
     @Override
     public Type visit(Not n) {
-        Type t = n.e.accept(this);
-        if (!(t instanceof BooleanType)) {
-            System.err.println("Erro Semântico: O operando do '!' deve ser booleano.");
-        }
+        if (!isBool(n.e.accept(this))) reportError("Operando de '!' deve ser booleano.");
         return new BooleanType();
     }
 
     @Override
     public Type visit(ArrayLookup n) {
-        Type arrayType = n.e1.accept(this);
-        Type indexType = n.e2.accept(this);
-        if (!(arrayType instanceof IntArrayType)) {
-            System.err.println("Erro Semântico: Tentativa de indexar algo que não é um array de inteiros.");
-        }
-        if (!(indexType instanceof IntegerType)) {
-            System.err.println("Erro Semântico: O índice do array deve ser um inteiro.");
-        }
+        if (!isIntArray(n.e1.accept(this))) reportError("Acesso de indice exige um array.");
+        if (!isInt(n.e2.accept(this))) reportError("Indice do array deve ser inteiro.");
         return new IntegerType();
     }
 
     @Override
     public Type visit(ArrayLength n) {
-        Type arrayType = n.e.accept(this);
-        if (!(arrayType instanceof IntArrayType)) {
-            System.err.println("Erro Semântico: .length só pode ser usado em arrays de inteiros.");
-        }
+        if (!isIntArray(n.e.accept(this))) reportError("'.length' exige um array.");
         return new IntegerType();
     }
 
     @Override
     public Type visit(Call n) {
-        Type callerType = n.e.accept(this);
+        Type classType = n.e.accept(this);
+        if (!(classType instanceof IdentifierType)) {
+            reportError("Chamada de metodo em algo que nao eh um objeto.");
+            return new IntegerType();
+        }
+        String cName = ((IdentifierType) classType).s;
+        String mName = n.i.s;
+        String key = cName + "." + mName;
 
-        if (!(callerType instanceof IdentifierType)) {
-            System.err.println("Erro Semântico: Chamada de método num tipo inválido.");
+        Type retType = (Type) symbolTable.get(Symbol.symbol(key + ".returnType"));
+        if (retType == null) {
+            reportError("Metodo '" + mName + "' nao existe na classe '" + cName + "'.");
             return new IntegerType();
         }
 
-        String className = ((IdentifierType) callerType).s;
-        String methodName = n.i.s;
-
-        // Pede o tipo de retorno deste método à Tabela de Símbolos
-        Type returnType = (Type) symbolTable.get(Symbol.symbol(className + "." + methodName + ".returnType"));
-
-        if (returnType == null) {
-            System.err.println("Erro Semântico: O método '" + methodName + "' não existe na classe '" + className + "'.");
-            return new IntegerType();
+        Integer expected = (Integer) symbolTable.get(Symbol.symbol(key + ".numArgs"));
+        if (expected == null || n.el.size() != expected) {
+            reportError("Numero de argumentos incorreto para o metodo '" + mName + "'.");
+        } else {
+            for (int i = 0; i < n.el.size(); i++) {
+                Type formal = (Type) symbolTable.get(Symbol.symbol(key + ".arg." + i));
+                Type actual = n.el.elementAt(i).accept(this);
+                if (!isCompatible(formal, actual)) reportError("Tipo do argumento " + i + " incompativel em '" + mName + "'.");
+            }
         }
-
-        for (int i = 0; i < n.el.size(); i++) {
-            n.el.elementAt(i).accept(this);
-        }
-
-        return returnType;
+        return retType;
     }
 
     // TERMINAIS
     @Override
-    public Type visit(IntegerLiteral n) {
-        return new IntegerType();
-    }
+    public Type visit(IntegerLiteral n) { return new IntegerType(); }
 
     @Override
-    public Type visit(True n) {
-        return new BooleanType();
-    }
+    public Type visit(True n) { return new BooleanType(); }
 
     @Override
-    public Type visit(False n) {
-        return new BooleanType();
-    }
+    public Type visit(False n) { return new BooleanType(); }
 
     @Override
     public Type visit(IdentifierExp n) {
         Type t = getVarType(n.s);
         if (t == null) {
-            System.err.println("Erro Semântico: Variável '" + n.s + "' não declarada.");
+            reportError("Variavel '" + n.s + "' nao declarada.");
             return new IntegerType();
         }
         return t;
     }
 
     @Override
-    public Type visit(This n) {
-        if (currClass == null) {
-            System.err.println("Erro Semântico: 'this' usado fora do contexto de uma classe.");
-            return new IntegerType();
-        }
-        return new IdentifierType(currClass);
-    }
+    public Type visit(This n) { return new IdentifierType(currClass); }
 
     @Override
     public Type visit(NewArray n) {
-        Type sizeType = n.e.accept(this);
-        if (!(sizeType instanceof IntegerType)) {
-            System.err.println("Erro Semântico: O tamanho do array deve ser um número inteiro.");
-        }
+        if (!isInt(n.e.accept(this))) reportError("Tamanho do array deve ser inteiro.");
         return new IntArrayType();
     }
 
     @Override
-    public Type visit(NewObject n) {
-        // Assume-se que a classe existe (uma verificação mais robusta procuraria a classe na tabela)
-        return new IdentifierType(n.i.s);
-    }
+    public Type visit(NewObject n) { return new IdentifierType(n.i.s); }
+
 }

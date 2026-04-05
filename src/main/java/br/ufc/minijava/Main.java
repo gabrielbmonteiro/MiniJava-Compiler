@@ -27,11 +27,21 @@ public class Main {
             BuildSymbolTableVisitor buildSymTab = new BuildSymbolTableVisitor();
             root.accept(buildSymTab);
 
+            // checar se existem duplicatas
+            if (buildSymTab.getQuantidadeErros() > 0) {
+                System.err.println("\nAnalise concluida. Foram encontrados " + buildSymTab.getQuantidadeErros() + " erro(s) de declaracao.");
+                return;
+            }
+
             // Passo 2 da Semântica: Percorre a AST verificando os tipos usando a tabela criada
             TypeCheckVisitor typeCheck = new TypeCheckVisitor(buildSymTab.getTable());
             root.accept(typeCheck);
 
-            System.out.println("Analise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
+            if (typeCheck.getQuantidadeErros() > 0) {
+                System.err.println("\nAnalise concluida. Foram encontrados " + typeCheck.getQuantidadeErros() + " erro(s) semantico(s).");
+            } else {
+                System.out.println("\nAnalise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
+            }
 
         } catch (FileNotFoundException e) {
             System.out.println("Erro: Ficheiro nao encontrado - " + args[0]);
