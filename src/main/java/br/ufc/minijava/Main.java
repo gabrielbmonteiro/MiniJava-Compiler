@@ -4,6 +4,10 @@ import br.ufc.minijava.parser.MiniJavaParser;
 import br.ufc.minijava.parser.ParseException;
 import br.ufc.minijava.parser.TokenMgrError;
 
+import syntaxtree.Program;
+import semantic.BuildSymbolTableVisitor;
+import semantic.TypeCheckVisitor;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
@@ -17,9 +21,17 @@ public class Main {
         try {
             FileInputStream ficheiro = new FileInputStream(args[0]);
             MiniJavaParser parser = new MiniJavaParser(ficheiro);
-            parser.Program();
+            Program root = parser.Program();
 
-            System.out.println("Analise concluida com sucesso! Nenhum erro lexico ou sintatico.");
+            // Passo 1 da Semântica: Percorre a AST para construir a Tabela de Símbolos
+            BuildSymbolTableVisitor buildSymTab = new BuildSymbolTableVisitor();
+            root.accept(buildSymTab);
+
+            // Passo 2 da Semântica: Percorre a AST verificando os tipos usando a tabela criada
+            TypeCheckVisitor typeCheck = new TypeCheckVisitor(buildSymTab.getTable());
+            root.accept(typeCheck);
+
+            System.out.println("Analise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
 
         } catch (FileNotFoundException e) {
             System.out.println("Erro: Ficheiro nao encontrado - " + args[0]);

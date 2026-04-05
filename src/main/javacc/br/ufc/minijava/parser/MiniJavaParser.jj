@@ -6,6 +6,9 @@ PARSER_BEGIN(MiniJavaParser)
 
 package br.ufc.minijava.parser;
 
+import syntaxtree.*;
+import visitor.*;
+
   public class MiniJavaParser {}
 
 PARSER_END(MiniJavaParser)
@@ -69,87 +72,227 @@ TOKEN : {
 /* 4. ANÁLISE SINTÁTICA */
 // TODO: Substituir pelas regras do MiniJava (livro do Appel)
 
-void Program() : {} {
-  MainClass() ( ClassDeclaration() )* <EOF>
+Program Program() :
+{
+  MainClass m;
+  ClassDeclList cl = new ClassDeclList();
+  ClassDecl c;
+}
+{
+  m=MainClass()
+  ( c=ClassDeclaration() { cl.addElement(c); } )* <EOF>
+  { return new Program(m, cl); }
 }
 
-void MainClass() : {} {
-  <CLASS> <ID> <LBRACE>
-    <PUBLIC> <STATIC> <VOID> <MAIN> <LPAREN> <STRING> <LSQPAREN> <RSQPAREN> <ID> <RPAREN>
-    <LBRACE> Statement() <RBRACE>
+MainClass MainClass() :
+{
+  Token className;
+  Token argsName;
+  Statement s;
+}
+{
+  <CLASS> className=<ID> <LBRACE>
+    <PUBLIC> <STATIC> <VOID> <MAIN> <LPAREN> <STRING> <LSQPAREN> <RSQPAREN> argsName=<ID> <RPAREN>
+    <LBRACE> s=Statement() <RBRACE>
   <RBRACE>
+  { return new MainClass(new Identifier(className.image), new Identifier(argsName.image), s); }
 }
 
-void ClassDeclaration() : {} {
-  <CLASS> <ID> [ <EXTENDS> <ID> ] <LBRACE> ( VarDeclaration() )* ( MethodDeclaration() )* <RBRACE>
+ClassDecl ClassDeclaration() :
+{
+  Token className;
+  Token superClass = null;
+  VarDeclList vl = new VarDeclList();
+  MethodDeclList ml = new MethodDeclList();
+  VarDecl v;
+  MethodDecl m;
+}
+{
+  <CLASS> className=<ID>
+  [ <EXTENDS> superClass=<ID> ]
+  <LBRACE>
+    ( v=VarDeclaration() { vl.addElement(v); } )* ( m=MethodDeclaration() { ml.addElement(m); } )* <RBRACE>
+  {
+    if (superClass == null) {
+      return new ClassDeclSimple(new Identifier(className.image), vl, ml);
+    } else {
+      return new ClassDeclExtends(new Identifier(className.image), new Identifier(superClass.image), vl, ml);
+    }
+  }
 }
 
-void VarDeclaration() : {} {
-  Type() <ID> <SEMICOLON>
+VarDecl VarDeclaration() :
+{
+  Type t;
+  Token i;
+}
+{
+  t=Type() i=<ID> <SEMICOLON>
+  { return new VarDecl(t, new Identifier(i.image)); }
 }
 
-void MethodDeclaration() : {} {
-  <PUBLIC> Type() <ID> <LPAREN> [ FormalList() ] <RPAREN>
-  <LBRACE> ( LOOKAHEAD(2) VarDeclaration() )* ( Statement() )* <RETURN> Expression() <SEMICOLON> <RBRACE>
+MethodDecl MethodDeclaration() :
+{
+  Type t;
+  Token i;
+  FormalList fl = new FormalList();
+  VarDeclList vl = new VarDeclList();
+  StatementList sl = new StatementList();
+  VarDecl v;
+  Statement s;
+  Exp e;
+}
+{
+  <PUBLIC> t=Type() i=<ID> <LPAREN> [ fl=FormalList() ] <RPAREN>
+  <LBRACE>
+    ( LOOKAHEAD(2) v=VarDeclaration() { vl.addElement(v); } )* ( s=Statement() { sl.addElement(s); } )* <RETURN> e=Expression() <SEMICOLON>
+  <RBRACE>
+  { return new MethodDecl(t, new Identifier(i.image), fl, vl, sl, e); }
 }
 
-void FormalList() : {} {
-  Type() <ID> ( <COMMA> Type() <ID> )*
+FormalList FormalList() :
+{
+  FormalList fl = new FormalList();
+  Type t;
+  Token i;
+}
+{
+  t=Type() i=<ID> { fl.addElement(new Formal(t, new Identifier(i.image))); }
+  ( <COMMA> t=Type() i=<ID> { fl.addElement(new Formal(t, new Identifier(i.image))); } )*
+  { return fl; }
 }
 
-void Type() : {} {
-  LOOKAHEAD(2) <INT> <LSQPAREN> <RSQPAREN> | <BOOLEAN> | <INT> | <ID>
+Type Type() :
+{
+  Token t;
+}
+{
+  LOOKAHEAD(2)
+  <INT> <LSQPAREN> <RSQPAREN> { return new IntArrayType(); }
+  | <BOOLEAN> { return new BooleanType(); }
+  | <INT> { return new IntegerType(); }
+  | t=<ID> { return new IdentifierType(t.image); }
 }
 
-void Statement() : {} {
-    <LBRACE> ( Statement() )* <RBRACE>
-  | <IF> <LPAREN> Expression() <RPAREN> Statement() <ELSE> Statement()
-  | <WHILE> <LPAREN> Expression() <RPAREN> Statement()
-  | <PRINT> <LPAREN> Expression() <RPAREN> <SEMICOLON>
-  | LOOKAHEAD(2) <ID> <ASSIGN> Expression() <SEMICOLON>
-  | <ID> <LSQPAREN> Expression() <RSQPAREN> <ASSIGN> Expression() <SEMICOLON>
+Statement Statement() :
+{
+  Statement s1, s2;
+  Exp e1, e2;
+  StatementList sl = new StatementList();
+  Token i;
+}
+{
+    <LBRACE> ( s1=Statement() { sl.addElement(s1); } )* <RBRACE>
+    { return new Block(sl); }
+  |
+    <IF> <LPAREN> e1=Expression() <RPAREN> s1=Statement() <ELSE> s2=Statement()
+    { return new If(e1, s1, s2); }
+  |
+    <WHILE> <LPAREN> e1=Expression() <RPAREN> s1=Statement()
+    { return new While(e1, s1); }
+  |
+    <PRINT> <LPAREN> e1=Expression() <RPAREN> <SEMICOLON>
+    { return new Print(e1); }
+  |
+    LOOKAHEAD(2) i=<ID> <ASSIGN> e1=Expression() <SEMICOLON>
+    { return new Assign(new Identifier(i.image), e1); }
+  |
+    i=<ID> <LSQPAREN> e1=Expression() <RSQPAREN> <ASSIGN> e2=Expression() <SEMICOLON>
+    { return new ArrayAssign(new Identifier(i.image), e1, e2); }
 }
 
-void Expression() : {} {
-    AndExpression()
+Exp Expression() :
+{ Exp e; }
+{
+    e=AndExpression() { return e; }
 }
 
-void AndExpression() : {} {
-    LessExpression() ( <AND> LessExpression() )*
+Exp AndExpression() :
+{ Exp e1, e2; }
+{
+    e1=LessExpression()
+    ( <AND> e2=LessExpression() { e1 = new And(e1, e2); } )*
+    { return e1; }
 }
 
-void LessExpression() : {} {
-    AdditiveExpression() ( <LT> AdditiveExpression() )*
+Exp LessExpression() :
+{ Exp e1, e2; }
+{
+    e1=AdditiveExpression()
+    ( <LT> e2=AdditiveExpression() { e1 = new LessThan(e1, e2); } )*
+    { return e1; }
 }
 
-void AdditiveExpression() : {} {
-    MultiplicativeExpression() ( ( <PLUS> | <MINUS> ) MultiplicativeExpression() )*
+Exp AdditiveExpression() :
+{
+    Exp e1, e2;
+    Token op;
+}
+{
+    e1=MultiplicativeExpression()
+    (
+      ( op=<PLUS> | op=<MINUS> ) e2=MultiplicativeExpression()
+      {
+          if (op.kind == PLUS) e1 = new Plus(e1, e2);
+          else e1 = new Minus(e1, e2);
+      }
+    )*
+    { return e1; }
 }
 
-void MultiplicativeExpression() : {} {
-    PrimaryExpression() ( ( <TIMES> | <DIVIDE> ) PrimaryExpression() )*
+Exp MultiplicativeExpression() :
+{
+    Exp e1, e2;
+    Token op;
+}
+{
+    e1=PrimaryExpression()
+    (
+      ( op=<TIMES> | op=<DIVIDE> ) e2=PrimaryExpression()
+      {
+          // O MiniJava original do livro do Appel não tem divisão, mas caso tenham criado a classe Divide na vossa AST:
+          // if (op.kind == TIMES) e1 = new Times(e1, e2); else e1 = new Divide(e1, e2);
+          // Se não tiverem, use apenas o Times:
+          e1 = new Times(e1, e2);
+      }
+    )*
+    { return e1; }
 }
 
-void PrimaryExpression() : {} {
+Exp PrimaryExpression() :
+{
+  Token t;
+  Exp e, e2;
+  ExpList el;
+}
+{
   (
-      <INTEGER_LITERAL>
-    | <TRUE>
-    | <FALSE>
-    | <ID>
-    | <THIS>
-    | LOOKAHEAD(3) <NEW> <INT> <LSQPAREN> Expression() <RSQPAREN>
-    | <NEW> <ID> <LPAREN> <RPAREN>
-    | <NOT> PrimaryExpression()
-    | <LPAREN> Expression() <RPAREN>
+      t=<INTEGER_LITERAL> { e = new IntegerLiteral(Integer.parseInt(t.image)); }
+    | <TRUE> { e = new True(); }
+    | <FALSE> { e = new False(); }
+    | t=<ID> { e = new IdentifierExp(t.image); }
+    | <THIS> { e = new This(); }
+    | LOOKAHEAD(3) <NEW> <INT> <LSQPAREN> e2=Expression() <RSQPAREN> { e = new NewArray(e2); }
+    | <NEW> t=<ID> <LPAREN> <RPAREN> { e = new NewObject(new Identifier(t.image)); }
+    | <NOT> e2=PrimaryExpression() { e = new Not(e2); }
+    | <LPAREN> e=Expression() <RPAREN>
   )
   (
-    // Sufixos que podem se repetir: a.metodo().outro[0]
-    <LSQPAREN> Expression() <RSQPAREN>
-    | LOOKAHEAD(2) <DOT> <ID> <LPAREN> [ ExpressionList() ] <RPAREN>
-    | <DOT> <LENGTH>
+    // Sufixos encadeados: a.metodo()[0].length
+    <LSQPAREN> e2=Expression() <RSQPAREN> { e = new ArrayLookup(e, e2); }
+    | LOOKAHEAD(2) <DOT> t=<ID> <LPAREN> { el = new ExpList(); } [ el=ExpressionList() ] <RPAREN> { e = new Call(e, new Identifier(t.image), el); }
+    | <DOT> <LENGTH> { e = new ArrayLength(e); }
   )*
+  { return e; }
 }
 
-void ExpressionList() : {} {
-  Expression() ( <COMMA> Expression() )*
+ExpList ExpressionList() :
+{
+  ExpList el = new ExpList();
+  Exp e;
+}
+{
+  e=Expression() { el.addElement(e); }
+  ( <COMMA> e=Expression() { el.addElement(e); } )*
+  { return el; }
 }
