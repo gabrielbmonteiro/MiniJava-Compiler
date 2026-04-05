@@ -26,7 +26,7 @@ Este repositório contém a implementação de um compilador para a linguagem **
 ### 1. Compilar e Gerar o Parser
 Sempre que houver alterações no ficheiro `.jj` ou no código Java, execute o comando abaixo para garantir que o projeto seja reconstruído:
 ```bash
-    mvn compile
+    mvn clean compile
 ```
 
 ### 2. Rodar o Compilador
