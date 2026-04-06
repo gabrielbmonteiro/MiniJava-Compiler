@@ -32,11 +32,19 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
 
     private Type getVarType(String id) {
         Type t = null;
+
         if (currMethod != null) {
             t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + currMethod + "." + id));
         }
+
         if (t == null) {
-            t = (Type) symbolTable.get(Symbol.symbol(currClass + "." + id));
+            String searchClass = currClass;
+            while (searchClass != null && t == null) {
+                t = (Type) symbolTable.get(Symbol.symbol(searchClass + "." + id));
+                if (t == null) {
+                    searchClass = (String) symbolTable.get(Symbol.symbol(searchClass + ".extends"));
+                }
+            }
         }
         return t;
     }
@@ -126,6 +134,34 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(MethodDecl n) {
         currMethod = n.i.s;
+
+        String parentClass = (String) symbolTable.get(Symbol.symbol(currClass + ".extends"));
+        if (parentClass != null) {
+            String parentMethodKey = parentClass + "." + currMethod;
+            Type parentRetType = (Type) symbolTable.get(Symbol.symbol(parentMethodKey + ".returnType"));
+
+            if (parentRetType != null) {
+                if (!isCompatible(parentRetType, n.t)) {
+                    reportError("O tipo de retorno do metodo '" + currMethod + "' nao coincide com o da superclasse.");
+                }
+
+                Integer parentNumArgs = (Integer) symbolTable.get(Symbol.symbol(parentMethodKey + ".numArgs"));
+                int currentNumArgs = (n.fl != null) ? n.fl.size() : 0;
+
+                if (parentNumArgs != null && parentNumArgs != currentNumArgs) {
+                    reportError("O numero de argumentos do metodo '" + currMethod + "' difere do metodo na superclasse.");
+                } else {
+                    for (int i = 0; i < currentNumArgs; i++) {
+                        Type parentArgType = (Type) symbolTable.get(Symbol.symbol(parentMethodKey + ".arg." + i));
+                        Type currentArgType = n.fl.elementAt(i).t;
+                        if (!isCompatible(parentArgType, currentArgType)) {
+                            reportError("O tipo do argumento " + i + " no metodo '" + currMethod + "' difere do declarado na superclasse.");
+                        }
+                    }
+                }
+            }
+        }
+
         for (int i = 0; i < n.sl.size(); i++) n.sl.elementAt(i).accept(this);
         Type returnExpType = n.e.accept(this);
         if (!isCompatible(n.t, returnExpType)) {
