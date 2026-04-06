@@ -33,7 +33,7 @@ foreach ($file in $files) {
             Write-Host " (Erro detectado)" -ForegroundColor Gray
         } else {
             Write-Host " [FALHA]" -ForegroundColor Red -NoNewline
-            Write-Host " (Não detectou erro)" -ForegroundColor Red
+            Write-Host " (Nao detectou erro)" -ForegroundColor Red
         }
     } else {
         if ($passou) {

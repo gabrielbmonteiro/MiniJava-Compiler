@@ -41,17 +41,48 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
         return t;
     }
 
+    // Verifica se 'sub' eh subclasse de 'sup' ou se sao iguais
+    private boolean isSubType(String sub, String sup) {
+        if (sub.equals(sup)) return true;
+
+        String current = sub;
+        int limit = 100;
+        while (current != null && limit > 0) {
+            String parent = (String) symbolTable.get(Symbol.symbol(current + ".extends"));
+            if (parent == null) break;
+            if (parent.equals(sup)) return true;
+            current = parent;
+            limit--;
+        }
+
+        if (limit == 0) {
+            reportError("Ciclo de heranca detectado ou hierarquia muito profunda envolvendo a classe '" + sub + "'.");
+            return false;
+        }
+        return false;
+    }
+
     private boolean isCompatible(Type t1, Type t2) {
         if (t1 == null || t2 == null) return false;
-        String n1 = t1.getClass().getSimpleName();
-        String n2 = t2.getClass().getSimpleName();
-        if (n1.equals(n2)) {
-            if (t1 instanceof IdentifierType && t2 instanceof IdentifierType) {
-                return ((IdentifierType) t1).s.equals(((IdentifierType) t2).s);
+        if (t1.getClass().getSimpleName().equals(t2.getClass().getSimpleName())) {
+            if (t1 instanceof IdentifierType) {
+                return isSubType(((IdentifierType)t2).s, ((IdentifierType)t1).s);
             }
             return true;
         }
         return false;
+    }
+
+    private boolean isDefined(Type t) {
+        if (t instanceof IdentifierType) {
+            String className = ((IdentifierType) t).s;
+            Object classDecl = symbolTable.get(Symbol.symbol(className));
+            if (classDecl == null) {
+                reportError("O tipo '" + className + "' nao foi definido (classe nao encontrada).");
+                return false;
+            }
+        }
+        return true;
     }
 
     // ESTRUTURA E ESCOPO
@@ -76,7 +107,18 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(ClassDeclExtends n) {
         currClass = n.i.s;
+
+        Type superType = new IdentifierType(n.j.s);
+        if (!isDefined(superType)) {
+            // O erro já é reportado dentro de isDefined
+        }
+
+        if (isSubType(n.j.s, n.i.s)) {
+            reportError("Ciclo de heranca detectado: a classe '" + n.i.s + "' nao pode estender '" + n.j.s + "'.");
+        }
+
         for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
+
         currClass = null;
         return null;
     }
@@ -190,22 +232,32 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
             reportError("Chamada de metodo em algo que nao eh um objeto.");
             return new IntegerType();
         }
+
         String cName = ((IdentifierType) classType).s;
         String mName = n.i.s;
-        String key = cName + "." + mName;
+        Type retType = null;
+        String baseKey = "";
 
-        Type retType = (Type) symbolTable.get(Symbol.symbol(key + ".returnType"));
+        String searchClass = cName;
+        while (searchClass != null && retType == null) {
+            baseKey = searchClass + "." + mName;
+            retType = (Type) symbolTable.get(Symbol.symbol(baseKey + ".returnType"));
+            if (retType == null) {
+                searchClass = (String) symbolTable.get(Symbol.symbol(searchClass + ".extends"));
+            }
+        }
+
         if (retType == null) {
-            reportError("Metodo '" + mName + "' nao existe na classe '" + cName + "'.");
+            reportError("Metodo '" + mName + "' nao existe na classe '" + cName + "' ou suas superclasses.");
             return new IntegerType();
         }
 
-        Integer expected = (Integer) symbolTable.get(Symbol.symbol(key + ".numArgs"));
+        Integer expected = (Integer) symbolTable.get(Symbol.symbol(baseKey + ".numArgs"));
         if (expected == null || n.el.size() != expected) {
             reportError("Numero de argumentos incorreto para o metodo '" + mName + "'.");
         } else {
             for (int i = 0; i < n.el.size(); i++) {
-                Type formal = (Type) symbolTable.get(Symbol.symbol(key + ".arg." + i));
+                Type formal = (Type) symbolTable.get(Symbol.symbol(baseKey + ".arg." + i));
                 Type actual = n.el.elementAt(i).accept(this);
                 if (!isCompatible(formal, actual)) reportError("Tipo do argumento " + i + " incompativel em '" + mName + "'.");
             }
@@ -243,6 +295,10 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     }
 
     @Override
-    public Type visit(NewObject n) { return new IdentifierType(n.i.s); }
+    public Type visit(NewObject n) {
+        Type t = new IdentifierType(n.i.s);
+        isDefined(t);
+        return t;
+    }
 
 }
