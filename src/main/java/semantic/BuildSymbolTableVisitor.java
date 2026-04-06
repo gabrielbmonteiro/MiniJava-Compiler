@@ -100,8 +100,13 @@ public class BuildSymbolTableVisitor extends DepthFirstVisitor {
 
     @Override
     public void visit(Formal n) {
-        // Parâmetros são tratados como variáveis locais do metodo
-        String key = currClass + "." + currMethod + "." + n.i.s;
+        String varName = n.i.s;
+        String key = currClass + "." + currMethod + "." + varName;
+
+        if (symbolTable.get(Symbol.symbol(key)) != null) {
+            System.err.println("Erro Semantico: Parametro '" + varName + "' ja declarado no metodo '" + currMethod + "'.");
+            quantidadeErros++;
+        }
         symbolTable.put(Symbol.symbol(key), n.t);
     }
 

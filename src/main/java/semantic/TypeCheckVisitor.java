@@ -81,6 +81,18 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
         return false;
     }
 
+    // Verifica se dois tipos são exatamentes iguais (usado na Sobrescrita)
+    private boolean isExactType(Type t1, Type t2) {
+        if (t1 == null || t2 == null) return false;
+        if (t1.getClass().getSimpleName().equals(t2.getClass().getSimpleName())) {
+            if (t1 instanceof IdentifierType) {
+                return ((IdentifierType)t1).s.equals(((IdentifierType)t2).s);
+            }
+            return true;
+        }
+        return false;
+    }
+
     private boolean isDefined(Type t) {
         if (t instanceof IdentifierType) {
             String className = ((IdentifierType) t).s;
@@ -143,7 +155,7 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
             Type parentRetType = (Type) symbolTable.get(Symbol.symbol(parentMethodKey + ".returnType"));
 
             if (parentRetType != null) {
-                if (!isCompatible(parentRetType, n.t)) {
+                if (!isExactType(parentRetType, n.t)) {
                     reportError("O tipo de retorno do metodo '" + currMethod + "' nao coincide com o da superclasse.");
                 }
 
@@ -156,7 +168,7 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
                     for (int i = 0; i < currentNumArgs; i++) {
                         Type parentArgType = (Type) symbolTable.get(Symbol.symbol(parentMethodKey + ".arg." + i));
                         Type currentArgType = n.fl.elementAt(i).t;
-                        if (!isCompatible(parentArgType, currentArgType)) {
+                        if (!isExactType(parentArgType, currentArgType)) {
                             reportError("O tipo do argumento " + i + " no metodo '" + currMethod + "' difere do declarado na superclasse.");
                         }
                     }
