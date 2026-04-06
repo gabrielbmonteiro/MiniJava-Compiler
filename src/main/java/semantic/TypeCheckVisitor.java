@@ -7,7 +7,7 @@ import symbol.Symbol;
 
 public class TypeCheckVisitor extends TypeDepthFirstVisitor {
 
-    private Table symbolTable;
+    private final Table symbolTable;
     private String currClass = null;
     private String currMethod = null;
     private int quantidadeErros = 0;
@@ -55,7 +55,7 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
 
         String current = sub;
         int limit = 100;
-        while (current != null && limit > 0) {
+        while (limit > 0) {
             String parent = (String) symbolTable.get(Symbol.symbol(current + ".extends"));
             if (parent == null) break;
             if (parent.equals(sup)) return true;
@@ -107,7 +107,8 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(ClassDeclSimple n) {
         currClass = n.i.s;
-        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
+        for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this); // Checa atributos
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this); // Checa métodos
         currClass = null;
         return null;
     }
@@ -117,15 +118,14 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
         currClass = n.i.s;
 
         Type superType = new IdentifierType(n.j.s);
-        if (!isDefined(superType)) {
-            // O erro já é reportado dentro de isDefined
-        }
+        if (!isDefined(superType)) {}
 
         if (isSubType(n.j.s, n.i.s)) {
             reportError("Ciclo de heranca detectado: a classe '" + n.i.s + "' nao pode estender '" + n.j.s + "'.");
         }
 
-        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
+        for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this); // Checa atributos
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this); // Checa métodos
 
         currClass = null;
         return null;
@@ -134,6 +134,8 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     @Override
     public Type visit(MethodDecl n) {
         currMethod = n.i.s;
+
+        isDefined(n.t);
 
         String parentClass = (String) symbolTable.get(Symbol.symbol(currClass + ".extends"));
         if (parentClass != null) {
@@ -162,11 +164,21 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
             }
         }
 
-        for (int i = 0; i < n.sl.size(); i++) n.sl.elementAt(i).accept(this);
+        if (n.fl != null) {
+            for (int i = 0; i < n.fl.size(); i++) n.fl.elementAt(i).accept(this);
+        }
+        if (n.vl != null) {
+            for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this);
+        }
+        if (n.sl != null) {
+            for (int i = 0; i < n.sl.size(); i++) n.sl.elementAt(i).accept(this);
+        }
+
         Type returnExpType = n.e.accept(this);
         if (!isCompatible(n.t, returnExpType)) {
             reportError("Tipo de retorno incompativel no metodo '" + n.i.s + "'.");
         }
+
         currMethod = null;
         return null;
     }
@@ -322,7 +334,13 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
     }
 
     @Override
-    public Type visit(This n) { return new IdentifierType(currClass); }
+    public Type visit(This n) {
+        if ("main".equals(currMethod)) {
+            reportError("A palavra-chave 'this' nao pode ser usada no contexto estatico do main.");
+            return new IntegerType();
+        }
+        return new IdentifierType(currClass);
+    }
 
     @Override
     public Type visit(NewArray n) {
@@ -335,6 +353,18 @@ public class TypeCheckVisitor extends TypeDepthFirstVisitor {
         Type t = new IdentifierType(n.i.s);
         isDefined(t);
         return t;
+    }
+
+    @Override
+    public Type visit(VarDecl n) {
+        isDefined(n.t); // Valida se o tipo da variável existe
+        return null;
+    }
+
+    @Override
+    public Type visit(Formal n) {
+        isDefined(n.t); // Valida se o tipo do parâmetro existe
+        return null;
     }
 
 }

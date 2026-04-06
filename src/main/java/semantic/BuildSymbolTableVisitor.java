@@ -73,7 +73,7 @@ public class BuildSymbolTableVisitor extends DepthFirstVisitor {
 
         // Salva os argumentos
         int numArgs = (n.fl != null) ? n.fl.size() : 0;
-        symbolTable.put(Symbol.symbol(key + ".numArgs"), Integer.valueOf(numArgs));
+        symbolTable.put(Symbol.symbol(key + ".numArgs"), numArgs);
 
         for (int i = 0; i < numArgs; i++) {
             Formal arg = n.fl.elementAt(i);
