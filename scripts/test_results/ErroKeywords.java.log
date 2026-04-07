@@ -1,0 +1,7 @@
+﻿
+[ERRO SINTATICO]
+-> Erro na linha 9, coluna 9
+-> Token inesperado: "int"
+-> O parser esperava um destes tokens: "return" "if" "while" "System.out.println" "{" 
+--------------------------------------------------
+

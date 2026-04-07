@@ -1,0 +1,5 @@
+﻿Erro Semantico: Ciclo de heranca detectado: a classe 'A' nao pode estender 'B'.
+Erro Semantico: Ciclo de heranca detectado: a classe 'B' nao pode estender 'A'.
+
+Analise concluida. Foram encontrados 2 erro(s) semantico(s).
+

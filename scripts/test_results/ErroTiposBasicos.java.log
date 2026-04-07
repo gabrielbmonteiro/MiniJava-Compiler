@@ -1,0 +1,8 @@
+﻿Erro Semantico: Operandos de '+' devem ser inteiros.
+Erro Semantico: Operandos de '&&' devem ser booleanos.
+Erro Semantico: Condicao do 'if' deve ser booleana.
+Erro Semantico: System.out.println exige um inteiro.
+Erro Semantico: Tipo de retorno incompativel no metodo 'verificar'.
+
+Analise concluida. Foram encontrados 5 erro(s) semantico(s).
+

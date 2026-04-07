@@ -1,0 +1,7 @@
+﻿
+[ERRO SINTATICO]
+-> Erro na linha 4, coluna 5
+-> Token inesperado: "}"
+-> O parser esperava um destes tokens: ";" 
+--------------------------------------------------
+
