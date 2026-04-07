@@ -1,0 +1,18 @@
+# === MAVEN ===
+target/
+
+# === INTELLIJ ===
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# === SISTEMA OPERACIONAL ===
+Thumbs.db
+.DS_Store
+
+# === LOGS ===
+*.log
+scripts/test_results/
+test_results/

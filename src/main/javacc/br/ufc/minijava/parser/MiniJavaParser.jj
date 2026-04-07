@@ -1,0 +1,294 @@
+options {
+  JAVA_UNICODE_ESCAPE = true;
+}
+
+PARSER_BEGIN(MiniJavaParser)
+
+package br.ufc.minijava.parser;
+
+import syntaxtree.*;
+import visitor.*;
+
+  public class MiniJavaParser {}
+
+PARSER_END(MiniJavaParser)
+
+/* 1. ANÁLISE LÉXICA: CARACTERES IGNORADOS */
+SKIP : {
+  " "
+| "\t"
+| "\n"
+| "\r"
+| < "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n") >             // Comentário de linha
+| < "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/" > // Comentário de bloco
+}
+
+/* 2. ANÁLISE LÉXICA: PALAVRAS RESERVADAS E OPERADORES */
+TOKEN : {
+  < CLASS: "class" >
+| < PUBLIC: "public" >
+| < STATIC: "static" >
+| < VOID: "void" >
+| < MAIN: "main" >
+| < STRING: "String" >
+| < EXTENDS: "extends" >
+| < RETURN: "return" >
+| < INT: "int" >
+| < BOOLEAN: "boolean" >
+| < IF: "if" >
+| < ELSE: "else" >
+| < WHILE: "while" >
+| < PRINT: "System.out.println" >
+| < TRUE: "true" >
+| < FALSE: "false" >
+| < THIS: "this" >
+| < NEW: "new" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < LPAREN: "(" >
+| < RPAREN: ")" >
+| < LSQPAREN: "[" >
+| < RSQPAREN: "]" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+| < ASSIGN: "=" >
+| < LT: "<" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < TIMES: "*" >
+| < DIVIDE: "/" >
+| < AND: "&&" >
+| < NOT: "!" >
+| < LENGTH: "length" >
+}
+
+/* 3. ANÁLISE LÉXICA: IDENTIFICADORES E NÚMEROS */
+TOKEN : {
+  < ID: ["a"-"z","A"-"Z"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+| < INTEGER_LITERAL: ( ["0"-"9"] )+ >
+}
+
+/* 4. ANÁLISE SINTÁTICA */
+Program Program() :
+{
+  MainClass m;
+  ClassDeclList cl = new ClassDeclList();
+  ClassDecl c;
+}
+{
+  m=MainClass()
+  ( c=ClassDeclaration() { cl.addElement(c); } )* <EOF>
+  { return new Program(m, cl); }
+}
+
+MainClass MainClass() :
+{
+  Token className;
+  Token argsName;
+  Statement s;
+}
+{
+  <CLASS> className=<ID> <LBRACE>
+    <PUBLIC> <STATIC> <VOID> <MAIN> <LPAREN> <STRING> <LSQPAREN> <RSQPAREN> argsName=<ID> <RPAREN>
+    <LBRACE> s=Statement() <RBRACE>
+  <RBRACE>
+  { return new MainClass(new Identifier(className.image), new Identifier(argsName.image), s); }
+}
+
+ClassDecl ClassDeclaration() :
+{
+  Token className;
+  Token superClass = null;
+  VarDeclList vl = new VarDeclList();
+  MethodDeclList ml = new MethodDeclList();
+  VarDecl v;
+  MethodDecl m;
+}
+{
+  <CLASS> className=<ID>
+  [ <EXTENDS> superClass=<ID> ]
+  <LBRACE>
+    ( v=VarDeclaration() { vl.addElement(v); } )* ( m=MethodDeclaration() { ml.addElement(m); } )* <RBRACE>
+  {
+    if (superClass == null) {
+      return new ClassDeclSimple(new Identifier(className.image), vl, ml);
+    } else {
+      return new ClassDeclExtends(new Identifier(className.image), new Identifier(superClass.image), vl, ml);
+    }
+  }
+}
+
+VarDecl VarDeclaration() :
+{
+  Type t;
+  Token i;
+}
+{
+  t=Type() i=<ID> <SEMICOLON>
+  { return new VarDecl(t, new Identifier(i.image)); }
+}
+
+MethodDecl MethodDeclaration() :
+{
+  Type t;
+  Token i;
+  FormalList fl = new FormalList();
+  VarDeclList vl = new VarDeclList();
+  StatementList sl = new StatementList();
+  VarDecl v;
+  Statement s;
+  Exp e;
+}
+{
+  <PUBLIC> t=Type() i=<ID> <LPAREN> [ fl=FormalList() ] <RPAREN>
+  <LBRACE>
+    ( LOOKAHEAD(2) v=VarDeclaration() { vl.addElement(v); } )* ( s=Statement() { sl.addElement(s); } )* <RETURN> e=Expression() <SEMICOLON>
+  <RBRACE>
+  { return new MethodDecl(t, new Identifier(i.image), fl, vl, sl, e); }
+}
+
+FormalList FormalList() :
+{
+  FormalList fl = new FormalList();
+  Type t;
+  Token i;
+}
+{
+  t=Type() i=<ID> { fl.addElement(new Formal(t, new Identifier(i.image))); }
+  ( <COMMA> t=Type() i=<ID> { fl.addElement(new Formal(t, new Identifier(i.image))); } )*
+  { return fl; }
+}
+
+Type Type() :
+{
+  Token t;
+}
+{
+  LOOKAHEAD(2)
+  <INT> <LSQPAREN> <RSQPAREN> { return new IntArrayType(); }
+  | <BOOLEAN> { return new BooleanType(); }
+  | <INT> { return new IntegerType(); }
+  | t=<ID> { return new IdentifierType(t.image); }
+}
+
+Statement Statement() :
+{
+  Statement s1, s2;
+  Exp e1, e2;
+  StatementList sl = new StatementList();
+  Token i;
+}
+{
+    <LBRACE> ( s1=Statement() { sl.addElement(s1); } )* <RBRACE>
+    { return new Block(sl); }
+  |
+    <IF> <LPAREN> e1=Expression() <RPAREN> s1=Statement() <ELSE> s2=Statement()
+    { return new If(e1, s1, s2); }
+  |
+    <WHILE> <LPAREN> e1=Expression() <RPAREN> s1=Statement()
+    { return new While(e1, s1); }
+  |
+    <PRINT> <LPAREN> e1=Expression() <RPAREN> <SEMICOLON>
+    { return new Print(e1); }
+  |
+    LOOKAHEAD(2) i=<ID> <ASSIGN> e1=Expression() <SEMICOLON>
+    { return new Assign(new Identifier(i.image), e1); }
+  |
+    i=<ID> <LSQPAREN> e1=Expression() <RSQPAREN> <ASSIGN> e2=Expression() <SEMICOLON>
+    { return new ArrayAssign(new Identifier(i.image), e1, e2); }
+}
+
+Exp Expression() :
+{ Exp e; }
+{
+    e=AndExpression() { return e; }
+}
+
+Exp AndExpression() :
+{ Exp e1, e2; }
+{
+    e1=LessExpression()
+    ( <AND> e2=LessExpression() { e1 = new And(e1, e2); } )*
+    { return e1; }
+}
+
+Exp LessExpression() :
+{ Exp e1, e2; }
+{
+    e1=AdditiveExpression()
+    ( <LT> e2=AdditiveExpression() { e1 = new LessThan(e1, e2); } )*
+    { return e1; }
+}
+
+Exp AdditiveExpression() :
+{
+    Exp e1, e2;
+    Token op;
+}
+{
+    e1=MultiplicativeExpression()
+    (
+      ( op=<PLUS> | op=<MINUS> ) e2=MultiplicativeExpression()
+      {
+          if (op.kind == PLUS) e1 = new Plus(e1, e2);
+          else e1 = new Minus(e1, e2);
+      }
+    )*
+    { return e1; }
+}
+
+Exp MultiplicativeExpression() :
+{
+    Exp e1, e2;
+    Token op;
+}
+{
+    e1=PrimaryExpression()
+    (
+      ( op=<TIMES> | op=<DIVIDE> ) e2=PrimaryExpression()
+      {
+          // O MiniJava original não tem divisão, logo não iremos trabalhar com o Divide:
+          e1 = new Times(e1, e2);
+      }
+    )*
+    { return e1; }
+}
+
+Exp PrimaryExpression() :
+{
+  Token t;
+  Exp e, e2;
+  ExpList el;
+}
+{
+  (
+      t=<INTEGER_LITERAL> { e = new IntegerLiteral(Integer.parseInt(t.image)); }
+    | <TRUE> { e = new True(); }
+    | <FALSE> { e = new False(); }
+    | t=<ID> { e = new IdentifierExp(t.image); }
+    | <THIS> { e = new This(); }
+    | LOOKAHEAD(3) <NEW> <INT> <LSQPAREN> e2=Expression() <RSQPAREN> { e = new NewArray(e2); }
+    | <NEW> t=<ID> <LPAREN> <RPAREN> { e = new NewObject(new Identifier(t.image)); }
+    | <NOT> e2=PrimaryExpression() { e = new Not(e2); }
+    | <LPAREN> e=Expression() <RPAREN>
+  )
+  (
+    // Sufixos encadeados: a.metodo()[0].length
+    <LSQPAREN> e2=Expression() <RSQPAREN> { e = new ArrayLookup(e, e2); }
+    | LOOKAHEAD(2) <DOT> t=<ID> <LPAREN> { el = new ExpList(); } [ el=ExpressionList() ] <RPAREN> { e = new Call(e, new Identifier(t.image), el); }
+    | <DOT> <LENGTH> { e = new ArrayLength(e); }
+  )*
+  { return e; }
+}
+
+ExpList ExpressionList() :
+{
+  ExpList el = new ExpList();
+  Exp e;
+}
+{
+  e=Expression() { el.addElement(e); }
+  ( <COMMA> e=Expression() { el.addElement(e); } )*
+  { return el; }
+}
