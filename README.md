@@ -18,12 +18,12 @@ O compilador foi validado utilizando uma bateria automatizada:
 
 ### 3. Erros de Execução Encontrados
 Durante o desenvolvimento da análise semântica, identificamos e corrigimos os seguintes problemas críticos:
-* **Travamento por Herança Cíclica:** Ao rodar um código onde `class A extends B` e `class B extends A`, o método isSubType entrava em loop infinito tentando resolver a hierarquia.
+* **Travamento por Herança Cíclica:** Ao rodar um código onde `class A extends B` e `class B extends A`, o método `isSubType` entrava em loop infinito tentando resolver a hierarquia.
   * Resolução: Implementação de um contador de profundidade (limite de saltos) no `isSubType` e uma verificação proativa no nó `ClassDeclExtends` para barrar a compilação imediatamente ao detectar o ciclo.
 * **NullPointerException na AST em Classes/Métodos Vazios:** O JavaCC pode instanciar listas como `null` se um método não possuir parâmetros ou variáveis. O `TypeCheckVisitor` quebrava ao tentar chamar `.size()` nessas listas.
   * Resolução: Adição de guardas de segurança (`if (lista != null)`) antes de iterar sobre `FormalList`, `VarDeclList` e `StatementList`.
 * **Falso Positivo no uso de this no main:** O compilador barrava o `this` no `main`, mas emitia uma mensagem confusa ("Método não encontrado") porque tentava procurar a chamada dentro da própria classe principal.
-  * Resolução: Interceptação do nó `This` verificando se o método atual é o main. Caso positivo, dispara um erro específico de "contexto estático" e retorna um tipo seguro para evitar erros em cascata (efeito dominó).
+  * Resolução: Interceptação do nó `This` verificando se o método atual é o main. Caso positivo, dispara um erro específico de "contexto estático" e retorna um tipo seguro para evitar erros em cascata.
 
 ### 4. Dificuldades Encontradas
 As principais barreiras técnicas superadas nesta etapa foram:
