@@ -33,8 +33,8 @@ As principais barreiras técnicas superadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela implementação dos Visitors (`BuildSymbolTableVisitor` e `TypeCheckVisitor`), resolução das lógicas de escopo achatado, implementação de checagem de tipos (subtipagem, proteção contra ciclos) e integração com a AST
-* **Albert Moren Paulino da Anunciação:** [A preencher]
-* **Antônio Kevin Carvalho Primo:** [A preencher]
+* **Albert Moren Paulino da Anunciação:** Responsável pela lógica de interceptação de escopo estático, resolvendo o tratamento adequado para o uso indevido da referência this no método main, além de auxiliar na estruturação dos casos de erro semântico.
+* **Antônio Kevin Carvalho Primo:** Responsavel pela elaboração e execução da bateria de testes de estresse estrutural, regras de escopo e tipagem estrita, documentando os resultados e garantindo a validação contínua da análise semântica.
 
 ## 🚀 Como Executar o Projeto
 
