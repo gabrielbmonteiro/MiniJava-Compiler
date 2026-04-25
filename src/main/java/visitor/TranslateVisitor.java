@@ -118,10 +118,9 @@ public class TranslateVisitor implements Visitor {
 
     private int getFieldIndex(String className, String fieldName) {
         Object classObj = symbolTable.get(Symbol.symbol(className));
-        int baseCount = 0;
+        int baseCount;
 
         if (classObj instanceof ClassDeclExtends c) {
-            // Busca recursivamente na classe pai e conta quantos campos ela tem
             baseCount = getParentFieldCount(c.j.s);
             for (int i = 0; i < c.vl.size(); i++) {
                 if (c.vl.elementAt(i).i.s.equals(fieldName)) return baseCount + i;
@@ -147,7 +146,7 @@ public class TranslateVisitor implements Visitor {
         Access a = varEnv.get(n.s);
 
         if (a != null) {
-            this.expResult = new Ex(a.exp(new TEMP(new Temp())));
+            this.expResult = new Ex(a.exp(new Tree.TEMP(currentFrame.FP())));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
@@ -171,9 +170,8 @@ public class TranslateVisitor implements Visitor {
         Tree.Exp left;
 
         if (a != null) {
-            left = a.exp(new TEMP(new Temp()));
+            left = a.exp(new Tree.TEMP(currentFrame.FP()));
         } else {
-            // Atribuição a Atributo de Classe
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
 
@@ -390,7 +388,7 @@ public class TranslateVisitor implements Visitor {
         Tree.Exp arrayBase;
 
         if (a != null) {
-            arrayBase = a.exp(new TEMP(new Temp()));
+            arrayBase = a.exp(new Tree.TEMP(currentFrame.FP()));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
@@ -433,7 +431,7 @@ public class TranslateVisitor implements Visitor {
 
     public void visit(This n) {
         Access thisAccess = currentFrame.formals.get(0);
-        this.expResult = new Ex(thisAccess.exp(new TEMP(new Temp())));
+        this.expResult = new Ex(thisAccess.exp(new Tree.TEMP(currentFrame.FP())));
     }
 
     public void visit(NewArray n) {

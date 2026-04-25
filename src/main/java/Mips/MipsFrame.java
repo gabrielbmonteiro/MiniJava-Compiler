@@ -2,7 +2,6 @@ package Mips;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import Frame.Access;
 import Frame.Frame;
 import Temp.Label;
@@ -13,12 +12,14 @@ public class MipsFrame extends Frame {
 
     private int localOffset = 0;
 
+    private static final Temp FP = new Temp();
+    private static final Temp RV = new Temp();
+
     public MipsFrame() {}
 
     private MipsFrame(Label name, List<Boolean> formals) {
         this.name = name;
         this.formals = new ArrayList<>();
-
         for (Boolean escape : formals) {
             this.formals.add(allocLocal(escape));
         }
@@ -41,7 +42,12 @@ public class MipsFrame extends Frame {
 
     @Override
     public Temp RV() {
-        return new Temp();
+        return RV; // Retorna o registrador fixo, não um novo
+    }
+
+    @Override
+    public Temp FP() {
+        return FP; // Retorna o registrador fixo
     }
 
     @Override
@@ -50,12 +56,12 @@ public class MipsFrame extends Frame {
     }
 
     @Override
-    public Tree.Exp externalCall(String func, List<Tree.Exp> args) {
-        Tree.ExpList irArgs = null;
+    public Exp externalCall(String func, List<Exp> args) {
+        ExpList irArgs = null;
         for (int i = args.size() - 1; i >= 0; i--) {
-            irArgs = new Tree.ExpList(args.get(i), irArgs);
+            irArgs = new ExpList(args.get(i), irArgs);
         }
-        return new Tree.CALL(new Tree.NAME(new Label(func)), irArgs);
+        return new CALL(new NAME(new Label(func)), irArgs);
     }
 
     @Override
