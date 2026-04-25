@@ -2,7 +2,7 @@
 
 Este repositório contém a implementação de um compilador para a linguagem **MiniJava**, desenvolvido para a disciplina de Compiladores. A fase atual contempla a **Tradução para o Código Intermediário (N3)**.
 
-## 📋 Relatório de Conclusão - Etapa N2
+## 📋 Relatório de Conclusão - Etapa N3
 
 ### 1. Status da Etapa
 **Concluída Completamente**. O compilador é capaz de realizar a tradução da Árvore de Sintaxe Abstrata (AST) para uma Árvore de Representação Intermediária (IR Tree) pura, independente da arquitetura da máquina alvo. A implementação engloba o `TranslateVisitor`, a abstração de Frames e Registradores (focada na convenção MIPS), tradução de controle de fluxo (If/While), mapeamento dinâmico de memória no Heap e Despacho Dinâmico (Dynamic Dispatch) suportando polimorfismo real através de Tabelas de Métodos Virtuais (VTables).
