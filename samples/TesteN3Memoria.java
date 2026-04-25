@@ -1,16 +1,16 @@
 class TesteN3Memoria {
     public static void main(String[] args) {
-        System.out.println(new Memoria().setX(10, 20));
+        System.out.println(new Memoria().setX(1, 2));
     }
 }
 
 class Memoria {
-    int x; // Atributo de classe (requer cálculo de offset com this)
+    int x; // Atributos primeiro
+    int y;
 
-    public int setX(int a, int b) {
-        int c; // Variável local
+    public int setX(int a, int b) { // Métodos depois, com 'public'
         x = a;
-        c = b;
-        return x + c;
+        y = b;
+        return x;
     }
 }
