@@ -16,6 +16,7 @@ import Tree.CONST;
 import Tree.MOVE;
 import Tree.SEQ;
 import Tree.TEMP;
+import symbol.Symbol;
 import syntaxtree.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,21 +25,20 @@ import java.util.HashMap;
 
 public class TranslateVisitor implements Visitor {
 
-    private Frame frameFactory;
+    private final Frame frameFactory;
     private Frame currentFrame;
     private Frag frags = null;
 
-    private symbol.Table symbolTable;
+    private final symbol.Table symbolTable;
     private String currentClassName;
 
-    private Map<String, Access> varEnv;
-
+    private final Map<String, Access> varEnv;
     private Exp expResult;
 
     public TranslateVisitor(Frame frameFactory, symbol.Table symbolTable) {
         this.frameFactory = frameFactory;
         this.symbolTable = symbolTable;
-        this.varEnv = new HashMap<String, Access>();
+        this.varEnv = new HashMap<>();
     }
 
     public Frag getResult() {
@@ -57,7 +57,7 @@ public class TranslateVisitor implements Visitor {
         varEnv.clear();
 
         Label methodLabel = new Label(n.i.s);
-        List<Boolean> formals = new ArrayList<Boolean>();
+        List<Boolean> formals = new ArrayList<>();
         formals.add(false);
 
         for (int i = 0; i < n.fl.size(); i++) {
@@ -116,18 +116,44 @@ public class TranslateVisitor implements Visitor {
     // 2. Acesso a Variáveis
     // --------------------------------------------------------
 
+    private int getFieldIndex(String className, String fieldName) {
+        Object classObj = symbolTable.get(Symbol.symbol(className));
+        int baseCount = 0;
+
+        if (classObj instanceof ClassDeclExtends c) {
+            // Busca recursivamente na classe pai e conta quantos campos ela tem
+            baseCount = getParentFieldCount(c.j.s);
+            for (int i = 0; i < c.vl.size(); i++) {
+                if (c.vl.elementAt(i).i.s.equals(fieldName)) return baseCount + i;
+            }
+        } else if (classObj instanceof ClassDeclSimple c) {
+            for (int i = 0; i < c.vl.size(); i++) {
+                if (c.vl.elementAt(i).i.s.equals(fieldName)) return i;
+            }
+        }
+        return 0;
+    }
+
+    private int getParentFieldCount(String className) {
+        Object classObj = symbolTable.get(Symbol.symbol(className));
+        if (classObj instanceof ClassDeclSimple c) return c.vl.size();
+        if (classObj instanceof ClassDeclExtends c) {
+            return c.vl.size() + getParentFieldCount(c.j.s);
+        }
+        return 0;
+    }
+
     public void visit(IdentifierExp n) {
         Access a = varEnv.get(n.s);
 
         if (a != null) {
-            Temp fp = new Temp();
-            this.expResult = new Ex(a.exp(new TEMP(fp)));
+            this.expResult = new Ex(a.exp(new TEMP(new Temp())));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
 
-            int fieldIndex = 1;
-            int offset = fieldIndex * currentFrame.wordSize();
+            int fieldIndex = getFieldIndex(currentClassName, n.s);
+            int offset = (fieldIndex + 1) * currentFrame.wordSize();
 
             this.expResult = new Ex(new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset))));
         }
@@ -145,14 +171,14 @@ public class TranslateVisitor implements Visitor {
         Tree.Exp left;
 
         if (a != null) {
-            Temp fp = new Temp();
-            left = a.exp(new TEMP(fp));
+            left = a.exp(new TEMP(new Temp()));
         } else {
+            // Atribuição a Atributo de Classe
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
 
-            int fieldIndex = 1;
-            int offset = fieldIndex * currentFrame.wordSize();
+            int fieldIndex = getFieldIndex(currentClassName, n.i.s);
+            int offset = (fieldIndex + 1) * currentFrame.wordSize();
 
             left = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset)));
         }
@@ -368,8 +394,8 @@ public class TranslateVisitor implements Visitor {
         } else {
             Access thisAccess = currentFrame.formals.get(0);
             Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
-            int fieldIndex = 1; // <- Lembre de integrar com a SymbolTable depois!
-            int offset = fieldIndex * currentFrame.wordSize();
+            int fieldIndex = getFieldIndex(currentClassName, n.i.s);
+            int offset = (fieldIndex + 1) * currentFrame.wordSize();
             arrayBase = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset)));
         }
 
@@ -422,7 +448,8 @@ public class TranslateVisitor implements Visitor {
 
     public void visit(NewObject n) {
         List<Tree.Exp> args = new ArrayList<>();
-        args.add(new Tree.CONST(currentFrame.wordSize()));
+        int count = getParentFieldCount(n.i.s) + 1;
+        args.add(new Tree.CONST(count * currentFrame.wordSize()));
 
         this.expResult = new Ex(currentFrame.externalCall("_allocRecord", args));
     }
