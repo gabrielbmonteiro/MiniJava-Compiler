@@ -50,8 +50,12 @@ public class MipsFrame extends Frame {
     }
 
     @Override
-    public Exp externalCall(String func, List<Exp> args) {
-        return new CALL(new NAME(new Label(func)), (ExpList) args);
+    public Tree.Exp externalCall(String func, List<Tree.Exp> args) {
+        Tree.ExpList irArgs = null;
+        for (int i = args.size() - 1; i >= 0; i--) {
+            irArgs = new Tree.ExpList(args.get(i), irArgs);
+        }
+        return new Tree.CALL(new Tree.NAME(new Label(func)), irArgs);
     }
 
     @Override

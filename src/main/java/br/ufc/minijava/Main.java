@@ -43,6 +43,33 @@ public class Main {
                 System.out.println("\nAnalise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
             }
 
+            // 1. Instancia a fábrica de Frames do MIPS
+            Frame.Frame mipsFrame = new Mips.MipsFrame();
+
+            // 2. Instancia o visitante de tradução passando o frame e a sua tabela de símbolos da N2
+            visitor.TranslateVisitor translateVisitor = new visitor.TranslateVisitor(mipsFrame, buildSymTab.getTable());
+
+            // 3. Inicia a tradução a partir da raiz da AST
+            root.accept(translateVisitor);
+
+            // 4. Recupera a lista de fragmentos gerados
+            Translate.Frag fragments = translateVisitor.getResult();
+
+            // 5. Imprime a Árvore IR de cada método
+            System.out.println("=== ARVORES DE REPRESENTACAO INTERMEDIARIA (IR) ===");
+            Translate.Frag f = fragments;
+            Tree.Print irPrinter = new Tree.Print(System.out);
+
+            while (f != null) {
+                if (f instanceof Translate.ProcFrag) {
+                    Translate.ProcFrag proc = (Translate.ProcFrag) f;
+                    System.out.println("Metodo: " + proc.frame.name.toString());
+                    irPrinter.prStm(proc.body);
+                    System.out.println("---------------------------------------------");
+                }
+                f = f.next;
+            }
+
         } catch (FileNotFoundException e) {
             System.out.println("Erro: Ficheiro nao encontrado - " + args[0]);
         } catch (ParseException e) {

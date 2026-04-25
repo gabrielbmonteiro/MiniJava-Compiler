@@ -28,12 +28,16 @@ public class TranslateVisitor implements Visitor {
     private Frame currentFrame;
     private Frag frags = null;
 
+    private symbol.Table symbolTable;
+    private String currentClassName;
+
     private Map<String, Access> varEnv;
 
     private Exp expResult;
 
-    public TranslateVisitor(Frame frameFactory) {
+    public TranslateVisitor(Frame frameFactory, symbol.Table symbolTable) {
         this.frameFactory = frameFactory;
+        this.symbolTable = symbolTable;
         this.varEnv = new HashMap<String, Access>();
     }
 
@@ -54,7 +58,7 @@ public class TranslateVisitor implements Visitor {
 
         Label methodLabel = new Label(n.i.s);
         List<Boolean> formals = new ArrayList<Boolean>();
-        formals.add(false); // 'this'
+        formals.add(false);
 
         for (int i = 0; i < n.fl.size(); i++) {
             formals.add(false);
@@ -76,7 +80,7 @@ public class TranslateVisitor implements Visitor {
         Tree.Stm bodyStm = null;
         for (int i = 0; i < n.sl.size(); i++) {
             n.sl.elementAt(i).accept(this);
-            Tree.Stm s = this.expResult.unNx(); // Recupera o resultado salvo
+            Tree.Stm s = this.expResult.unNx();
 
             if (s != null) {
                 if (bodyStm == null) bodyStm = s;
@@ -85,7 +89,7 @@ public class TranslateVisitor implements Visitor {
         }
 
         n.e.accept(this);
-        Tree.Exp returnExp = this.expResult.unEx(); // Recupera o resultado salvo
+        Tree.Exp returnExp = this.expResult.unEx();
 
         Tree.Stm returnStm = new MOVE(new TEMP(currentFrame.RV()), returnExp);
         if (bodyStm == null) bodyStm = returnStm;
@@ -96,12 +100,15 @@ public class TranslateVisitor implements Visitor {
         addFrag(new ProcFrag(bodyStm, currentFrame));
         currentFrame = previousFrame;
 
-        this.expResult = new Nx(bodyStm); // Salva o resultado final do método
+        this.expResult = new Nx(bodyStm);
     }
 
     public void visit(VarDecl n) {
-        Access a = currentFrame.allocLocal(false);
-        varEnv.put(n.i.s, a);
+        if (currentFrame != null) {
+            Access a = currentFrame.allocLocal(false);
+            varEnv.put(n.i.s, a);
+        }
+
         this.expResult = new Nx(null);
     }
 
@@ -116,7 +123,13 @@ public class TranslateVisitor implements Visitor {
             Temp fp = new Temp();
             this.expResult = new Ex(a.exp(new TEMP(fp)));
         } else {
-            this.expResult = new Ex(new CONST(0)); // Placeholder para atributos de classe
+            Access thisAccess = currentFrame.formals.get(0);
+            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+
+            int fieldIndex = 1;
+            int offset = fieldIndex * currentFrame.wordSize();
+
+            this.expResult = new Ex(new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset))));
         }
     }
 
@@ -125,13 +138,26 @@ public class TranslateVisitor implements Visitor {
     // --------------------------------------------------------
 
     public void visit(Assign n) {
-        n.i.accept(this);
-        Tree.Exp left = this.expResult.unEx();
-
         n.e.accept(this);
         Tree.Exp right = this.expResult.unEx();
 
-        this.expResult = new Nx(new MOVE(left, right));
+        Access a = varEnv.get(n.i.s);
+        Tree.Exp left;
+
+        if (a != null) {
+            Temp fp = new Temp();
+            left = a.exp(new TEMP(fp));
+        } else {
+            Access thisAccess = currentFrame.formals.get(0);
+            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+
+            int fieldIndex = 1;
+            int offset = fieldIndex * currentFrame.wordSize();
+
+            left = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset)));
+        }
+
+        this.expResult = new Nx(new Tree.MOVE(left, right));
     }
 
     public void visit(Plus n) {
@@ -169,21 +195,115 @@ public class TranslateVisitor implements Visitor {
 
     public void visit(Program n) {
         n.m.accept(this);
+
         for (int i = 0; i < n.cl.size(); i++) {
             n.cl.elementAt(i).accept(this);
         }
+
         this.expResult = new Nx(null);
     }
 
-    public void visit(MainClass n) { /* Implementação futura */ }
-    public void visit(ClassDeclSimple n) { /* Implementação futura */ }
-    public void visit(ClassDeclExtends n) { /* Implementação futura */ }
-    public void visit(Formal n) { /* Implementação futura */ }
-    public void visit(IntArrayType n) { /* Tipos não geram código IR */ }
-    public void visit(BooleanType n) { /* Tipos não geram código IR */ }
-    public void visit(IntegerType n) { /* Tipos não geram código IR */ }
-    public void visit(IdentifierType n) { /* Tipos não geram código IR */ }
-    public void visit(Block n) { /* Implementação futura */ }
+    public void visit(MainClass n) {
+        currentClassName = n.i1.s;
+        varEnv.clear();
+
+        Label mainLabel = new Label("main");
+        List<Boolean> formals = new ArrayList<>();
+        formals.add(false);
+
+        Frame previousFrame = currentFrame;
+        currentFrame = frameFactory.newFrame(mainLabel, formals);
+
+        Access argsAccess = currentFrame.formals.get(0);
+        varEnv.put(n.i2.s, argsAccess);
+
+        n.s.accept(this);
+        Tree.Stm bodyStm = this.expResult.unNx();
+
+        if (bodyStm == null) {
+            bodyStm = new Tree.EXPR(new Tree.CONST(0));
+        }
+
+        bodyStm = currentFrame.procEntryExit1(bodyStm);
+        addFrag(new ProcFrag(bodyStm, currentFrame));
+
+        currentFrame = previousFrame;
+        this.expResult = new Nx(bodyStm);
+    }
+
+    public void visit(ClassDeclSimple n) {
+        currentClassName = n.i.s;
+        for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this);
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(ClassDeclExtends n) {
+        currentClassName = n.i.s;
+        for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this);
+        for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(Minus n) {
+        n.e1.accept(this);
+        Tree.Exp left = this.expResult.unEx();
+
+        n.e2.accept(this);
+        Tree.Exp right = this.expResult.unEx();
+
+        this.expResult = new Ex(new Tree.BINOP(Tree.BINOP.MINUS, left, right));
+    }
+
+    public void visit(Times n) {
+        n.e1.accept(this);
+        Tree.Exp left = this.expResult.unEx();
+
+        n.e2.accept(this);
+        Tree.Exp right = this.expResult.unEx();
+
+        this.expResult = new Ex(new Tree.BINOP(Tree.BINOP.MUL, left, right));
+    }
+
+    public void visit(ArrayLookup n) {
+        n.e1.accept(this);
+        Tree.Exp arrayBase = this.expResult.unEx();
+
+        n.e2.accept(this);
+        Tree.Exp index = this.expResult.unEx();
+
+        Tree.Exp offset = new Tree.BINOP(Tree.BINOP.MUL,
+                new Tree.BINOP(Tree.BINOP.PLUS, index, new Tree.CONST(1)),
+                new Tree.CONST(currentFrame.wordSize()));
+
+        this.expResult = new Ex(new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, arrayBase, offset)));
+    }
+
+    public void visit(ArrayLength n) {
+        n.e.accept(this);
+        Tree.Exp arrayBase = this.expResult.unEx();
+
+        this.expResult = new Ex(new Tree.MEM(arrayBase));
+    }
+
+    public void visit(Block n) {
+        Tree.Stm blockStm = null;
+
+        for (int i = 0; i < n.sl.size(); i++) {
+            n.sl.elementAt(i).accept(this);
+            Tree.Stm currentStm = this.expResult.unNx();
+
+            if (currentStm != null) {
+                if (blockStm == null) {
+                    blockStm = currentStm;
+                } else {
+                    blockStm = new Tree.SEQ(blockStm, currentStm);
+                }
+            }
+        }
+
+        this.expResult = new Nx(blockStm);
+    }
 
     public void visit(If n) {
         Label t = new Label();
@@ -229,19 +349,141 @@ public class TranslateVisitor implements Visitor {
         this.expResult = new Nx(whileStm);
     }
 
-    public void visit(Print n) {}
-    public void visit(ArrayAssign n) {}
-    public void visit(And n) {}
-    public void visit(Minus n) {}
-    public void visit(Times n) {}
-    public void visit(ArrayLookup n) {}
-    public void visit(ArrayLength n) {}
-    public void visit(Call n) {}
-    public void visit(True n) {}
-    public void visit(False n) {}
-    public void visit(This n) {}
-    public void visit(NewArray n) {}
-    public void visit(NewObject n) {}
-    public void visit(Not n) {}
-    public void visit(Identifier n) {}
+    public void visit(Print n) {
+        n.e.accept(this);
+        Tree.Exp arg = this.expResult.unEx();
+
+        List<Tree.Exp> args = new ArrayList<>();
+        args.add(arg);
+
+        this.expResult = new Nx(new Tree.EXPR(currentFrame.externalCall("_printint", args)));
+    }
+
+    public void visit(ArrayAssign n) {
+        Access a = varEnv.get(n.i.s);
+        Tree.Exp arrayBase;
+
+        if (a != null) {
+            arrayBase = a.exp(new TEMP(new Temp()));
+        } else {
+            Access thisAccess = currentFrame.formals.get(0);
+            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+            int fieldIndex = 1; // <- Lembre de integrar com a SymbolTable depois!
+            int offset = fieldIndex * currentFrame.wordSize();
+            arrayBase = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset)));
+        }
+
+        n.e1.accept(this);
+        Tree.Exp index = this.expResult.unEx();
+
+        n.e2.accept(this);
+        Tree.Exp value = this.expResult.unEx();
+
+        Tree.Exp offsetExp = new Tree.BINOP(Tree.BINOP.MUL,
+                new Tree.BINOP(Tree.BINOP.PLUS, index, new Tree.CONST(1)),
+                new Tree.CONST(currentFrame.wordSize()));
+
+        Tree.Exp dest = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, arrayBase, offsetExp));
+
+        this.expResult = new Nx(new Tree.MOVE(dest, value));
+    }
+
+    public void visit(And n) {
+        n.e1.accept(this);
+        Translate.Exp left = this.expResult;
+
+        n.e2.accept(this);
+        Translate.Exp right = this.expResult;
+
+        this.expResult = new Cx() {
+            @Override
+            public Tree.Stm unCx(Label t, Label f) {
+                Label z = new Label();
+                return new Tree.SEQ(left.unCx(z, f),
+                        new Tree.SEQ(new Tree.LABEL(z), right.unCx(t, f)));
+            }
+        };
+    }
+
+    public void visit(This n) {
+        Access thisAccess = currentFrame.formals.get(0);
+        this.expResult = new Ex(thisAccess.exp(new TEMP(new Temp())));
+    }
+
+    public void visit(NewArray n) {
+        n.e.accept(this);
+        Tree.Exp size = this.expResult.unEx();
+
+        List<Tree.Exp> args = new ArrayList<>();
+        args.add(size);
+
+        this.expResult = new Ex(currentFrame.externalCall("_initArray", args));
+    }
+
+    public void visit(NewObject n) {
+        List<Tree.Exp> args = new ArrayList<>();
+        args.add(new Tree.CONST(currentFrame.wordSize()));
+
+        this.expResult = new Ex(currentFrame.externalCall("_allocRecord", args));
+    }
+
+    public void visit(Call n) {
+        n.e.accept(this);
+        Tree.Exp objInstance = this.expResult.unEx();
+
+        List<Tree.Exp> javaArgs = new ArrayList<>();
+        javaArgs.add(objInstance);
+
+        for (int i = 0; i < n.el.size(); i++) {
+            n.el.elementAt(i).accept(this);
+            javaArgs.add(this.expResult.unEx());
+        }
+
+        Tree.ExpList irArgs = null;
+        for (int i = javaArgs.size() - 1; i >= 0; i--) {
+            irArgs = new Tree.ExpList(javaArgs.get(i), irArgs);
+        }
+
+        Label funcLabel = new Label(n.i.s);
+        this.expResult = new Ex(new Tree.CALL(new Tree.NAME(funcLabel), irArgs));
+    }
+
+    public void visit(True n) {
+        this.expResult = new Ex(new Tree.CONST(1));
+    }
+
+    public void visit(False n) {
+        this.expResult = new Ex(new Tree.CONST(0));
+    }
+
+    public void visit(Not n) {
+        n.e.accept(this);
+        Tree.Exp exp = this.expResult.unEx();
+        this.expResult = new Ex(new Tree.BINOP(Tree.BINOP.MINUS, new Tree.CONST(1), exp));
+    }
+
+    public void visit(Formal n) {
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(IntArrayType n) {
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(BooleanType n) {
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(IntegerType n) {
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(IdentifierType n) {
+        this.expResult = new Nx(null);
+    }
+
+    public void visit(Identifier n) {
+        this.expResult = new Nx(null);
+    }
+
 }
