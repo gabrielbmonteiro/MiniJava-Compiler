@@ -54,7 +54,7 @@ public class TranslateVisitor implements Visitor {
         varEnv.clear();
         currentMethodName = n.i.s;
 
-        Label methodLabel = new Label(n.i.s);
+        Label methodLabel = new Label(currentClassName + "_" + n.i.s);
         List<Boolean> formals = new ArrayList<>();
         formals.add(false);
 
@@ -144,31 +144,46 @@ public class TranslateVisitor implements Visitor {
     }
 
     private List<String> buildVTable(String className) {
-        List<String> methods = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
         String parentClass = (String) symbolTable.get(Symbol.symbol(className + ".extends"));
         if (parentClass != null) {
-            methods.addAll(buildVTable(parentClass));
+            labels.addAll(buildVTable(parentClass));
         }
 
         Object classObj = symbolTable.get(Symbol.symbol(className));
         syntaxtree.MethodDeclList ml = null;
-        if (classObj instanceof syntaxtree.ClassDeclSimple) ml = ((syntaxtree.ClassDeclSimple)classObj).ml;
-        else if (classObj instanceof syntaxtree.ClassDeclExtends) ml = ((syntaxtree.ClassDeclExtends)classObj).ml;
+        if (classObj instanceof syntaxtree.ClassDeclSimple c) ml = c.ml;
+        else if (classObj instanceof syntaxtree.ClassDeclExtends c) ml = c.ml;
 
         if (ml != null) {
             for (int i = 0; i < ml.size(); i++) {
                 String mName = ml.elementAt(i).i.s;
-                if (!methods.contains(mName)) {
-                    methods.add(mName);
+                String scopedLabel = className + "_" + mName;
+
+                boolean overridden = false;
+                for (int j = 0; j < labels.size(); j++) {
+                    if (labels.get(j).endsWith("_" + mName)) {
+                        labels.set(j, scopedLabel);
+                        overridden = true;
+                        break;
+                    }
+                }
+                if (!overridden) {
+                    labels.add(scopedLabel);
                 }
             }
         }
-        return methods;
+        return labels;
     }
 
     private int getMethodIndex(String className, String methodName) {
         List<String> vtable = buildVTable(className);
-        return vtable.indexOf(methodName);
+        for (int i = 0; i < vtable.size(); i++) {
+            if (vtable.get(i).endsWith("_" + methodName)) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     private int getFieldIndex(String className, String fieldName) {
