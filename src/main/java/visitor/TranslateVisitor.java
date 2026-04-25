@@ -1,15 +1,11 @@
 package visitor;
 
-import Translate.Exp;
-import Translate.Ex;
-import Translate.Nx;
-import Translate.Cx;
-import Translate.Frag;
-import Translate.ProcFrag;
+import Translate.*;
 import Frame.Frame;
 import Frame.Access;
 import Temp.Label;
 import Temp.Temp;
+import Translate.Exp;
 import Tree.BINOP;
 import Tree.CJUMP;
 import Tree.CONST;
@@ -31,6 +27,7 @@ public class TranslateVisitor implements Visitor {
 
     private final symbol.Table symbolTable;
     private String currentClassName;
+    private String currentMethodName;
 
     private final Map<String, Access> varEnv;
     private Exp expResult;
@@ -55,6 +52,7 @@ public class TranslateVisitor implements Visitor {
     // --------------------------------------------------------
     public void visit(MethodDecl n) {
         varEnv.clear();
+        currentMethodName = n.i.s;
 
         Label methodLabel = new Label(n.i.s);
         List<Boolean> formals = new ArrayList<>();
@@ -99,6 +97,7 @@ public class TranslateVisitor implements Visitor {
 
         addFrag(new ProcFrag(bodyStm, currentFrame));
         currentFrame = previousFrame;
+        currentMethodName = null;
 
         this.expResult = new Nx(bodyStm);
     }
@@ -115,6 +114,62 @@ public class TranslateVisitor implements Visitor {
     // --------------------------------------------------------
     // 2. Acesso a Variáveis
     // --------------------------------------------------------
+
+    private String getTypeOfExp(syntaxtree.Exp e) {
+        if (e instanceof syntaxtree.This) {
+            return currentClassName;
+        } else if (e instanceof syntaxtree.NewObject) {
+            return ((syntaxtree.NewObject) e).i.s;
+        } else if (e instanceof syntaxtree.IdentifierExp) {
+            String varName = ((syntaxtree.IdentifierExp) e).s;
+            Type t = (Type) symbolTable.get(Symbol.symbol(currentClassName + "." + currentMethodName + "." + varName));
+            if (t == null) {
+                String searchClass = currentClassName;
+                while (searchClass != null && t == null) {
+                    t = (Type) symbolTable.get(Symbol.symbol(searchClass + "." + varName));
+                    if (t == null) {
+                        searchClass = (String) symbolTable.get(Symbol.symbol(searchClass + ".extends"));
+                    }
+                }
+            }
+            if (t instanceof syntaxtree.IdentifierType) return ((syntaxtree.IdentifierType) t).s;
+        } else if (e instanceof Call c) {
+            String callerClass = getTypeOfExp(c.e);
+            if (callerClass != null) {
+                Type retType = (Type) symbolTable.get(Symbol.symbol(callerClass + "." + c.i.s + ".returnType"));
+                if (retType instanceof syntaxtree.IdentifierType) return ((syntaxtree.IdentifierType) retType).s;
+            }
+        }
+        return null;
+    }
+
+    private List<String> buildVTable(String className) {
+        List<String> methods = new ArrayList<>();
+        String parentClass = (String) symbolTable.get(Symbol.symbol(className + ".extends"));
+        if (parentClass != null) {
+            methods.addAll(buildVTable(parentClass));
+        }
+
+        Object classObj = symbolTable.get(Symbol.symbol(className));
+        syntaxtree.MethodDeclList ml = null;
+        if (classObj instanceof syntaxtree.ClassDeclSimple) ml = ((syntaxtree.ClassDeclSimple)classObj).ml;
+        else if (classObj instanceof syntaxtree.ClassDeclExtends) ml = ((syntaxtree.ClassDeclExtends)classObj).ml;
+
+        if (ml != null) {
+            for (int i = 0; i < ml.size(); i++) {
+                String mName = ml.elementAt(i).i.s;
+                if (!methods.contains(mName)) {
+                    methods.add(mName);
+                }
+            }
+        }
+        return methods;
+    }
+
+    private int getMethodIndex(String className, String methodName) {
+        List<String> vtable = buildVTable(className);
+        return vtable.indexOf(methodName);
+    }
 
     private int getFieldIndex(String className, String fieldName) {
         Object classObj = symbolTable.get(Symbol.symbol(className));
@@ -149,7 +204,7 @@ public class TranslateVisitor implements Visitor {
             this.expResult = new Ex(a.exp(new Tree.TEMP(currentFrame.FP())));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
-            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+            Tree.Exp thisPtr = thisAccess.exp(new Tree.TEMP(currentFrame.FP()));
 
             int fieldIndex = getFieldIndex(currentClassName, n.s);
             int offset = (fieldIndex + 1) * currentFrame.wordSize();
@@ -173,7 +228,7 @@ public class TranslateVisitor implements Visitor {
             left = a.exp(new Tree.TEMP(currentFrame.FP()));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
-            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+            Tree.Exp thisPtr = thisAccess.exp(new Tree.TEMP(currentFrame.FP()));
 
             int fieldIndex = getFieldIndex(currentClassName, n.i.s);
             int offset = (fieldIndex + 1) * currentFrame.wordSize();
@@ -257,6 +312,15 @@ public class TranslateVisitor implements Visitor {
 
     public void visit(ClassDeclSimple n) {
         currentClassName = n.i.s;
+
+        List<String> vtableMethods = buildVTable(currentClassName);
+        StringBuilder vtableData = new StringBuilder();
+        vtableData.append("vtable_").append(currentClassName).append(":\n");
+        for (String mName : vtableMethods) {
+            vtableData.append("    .word ").append(mName).append("\n");
+        }
+        addFrag(new DataFrag(vtableData.toString()));
+
         for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this);
         for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
         this.expResult = new Nx(null);
@@ -264,6 +328,15 @@ public class TranslateVisitor implements Visitor {
 
     public void visit(ClassDeclExtends n) {
         currentClassName = n.i.s;
+
+        List<String> vtableMethods = buildVTable(currentClassName);
+        StringBuilder vtableData = new StringBuilder();
+        vtableData.append("vtable_").append(currentClassName).append(":\n");
+        for (String mName : vtableMethods) {
+            vtableData.append("    .word ").append(mName).append("\n");
+        }
+        addFrag(new DataFrag(vtableData.toString()));
+
         for (int i = 0; i < n.vl.size(); i++) n.vl.elementAt(i).accept(this);
         for (int i = 0; i < n.ml.size(); i++) n.ml.elementAt(i).accept(this);
         this.expResult = new Nx(null);
@@ -391,7 +464,8 @@ public class TranslateVisitor implements Visitor {
             arrayBase = a.exp(new Tree.TEMP(currentFrame.FP()));
         } else {
             Access thisAccess = currentFrame.formals.get(0);
-            Tree.Exp thisPtr = thisAccess.exp(new TEMP(new Temp()));
+            Tree.Exp thisPtr = thisAccess.exp(new Tree.TEMP(currentFrame.FP()));
+
             int fieldIndex = getFieldIndex(currentClassName, n.i.s);
             int offset = (fieldIndex + 1) * currentFrame.wordSize();
             arrayBase = new Tree.MEM(new Tree.BINOP(Tree.BINOP.PLUS, thisPtr, new Tree.CONST(offset)));
@@ -445,11 +519,22 @@ public class TranslateVisitor implements Visitor {
     }
 
     public void visit(NewObject n) {
-        List<Tree.Exp> args = new ArrayList<>();
         int count = getParentFieldCount(n.i.s) + 1;
+
+        List<Tree.Exp> args = new ArrayList<>();
         args.add(new Tree.CONST(count * currentFrame.wordSize()));
 
-        this.expResult = new Ex(currentFrame.externalCall("_allocRecord", args));
+        Tree.Exp allocCall = currentFrame.externalCall("_allocRecord", args);
+
+        Temp objTemp = new Temp();
+        Tree.Exp objPtr = new Tree.TEMP(objTemp);
+        Label vtableLabel = new Label("vtable_" + n.i.s);
+        Tree.Stm initObj = new Tree.MOVE(objPtr, allocCall);
+        Tree.Stm setVTable = new Tree.MOVE(new Tree.MEM(objPtr), new Tree.NAME(vtableLabel));
+
+        this.expResult = new Ex(
+                new Tree.ESEQ(new Tree.SEQ(initObj, setVTable), objPtr)
+        );
     }
 
     public void visit(Call n) {
@@ -469,8 +554,22 @@ public class TranslateVisitor implements Visitor {
             irArgs = new Tree.ExpList(javaArgs.get(i), irArgs);
         }
 
-        Label funcLabel = new Label(n.i.s);
-        this.expResult = new Ex(new Tree.CALL(new Tree.NAME(funcLabel), irArgs));
+        String className = getTypeOfExp(n.e);
+
+        if (className != null) {
+            int methodIndex = getMethodIndex(className, n.i.s);
+            int methodOffset = methodIndex * currentFrame.wordSize();
+
+            Tree.Exp vtablePtr = new Tree.MEM(objInstance);
+
+            Tree.Exp funcAddr = new Tree.MEM(
+                    new Tree.BINOP(Tree.BINOP.PLUS, vtablePtr, new Tree.CONST(methodOffset))
+            );
+
+            this.expResult = new Ex(new Tree.CALL(funcAddr, irArgs));
+        } else {
+            this.expResult = new Ex(new Tree.CALL(new Tree.NAME(new Label(n.i.s)), irArgs));
+        }
     }
 
     public void visit(True n) {

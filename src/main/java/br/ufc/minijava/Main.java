@@ -66,6 +66,11 @@ public class Main {
                     irPrinter.prStm(proc.body);
                     System.out.println("---------------------------------------------");
                 }
+                else if (f instanceof Translate.DataFrag data) {
+                    System.out.println(">>> Dados na Memoria (VTable):");
+                    System.out.print(data.data);
+                    System.out.println("---------------------------------------------");
+                }
                 f = f.next;
             }
 
