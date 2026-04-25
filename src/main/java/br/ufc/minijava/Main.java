@@ -20,8 +20,8 @@ public class Main {
 
         try {
             FileInputStream ficheiro = new FileInputStream(args[0]);
-            MiniJavaParser parser = new MiniJavaParser(ficheiro);
-            Program root = parser.Program();
+            new MiniJavaParser(ficheiro);
+            Program root = MiniJavaParser.Program();
 
             // Passo 1 da Semântica: Percorre a AST para construir a Tabela de Símbolos
             BuildSymbolTableVisitor buildSymTab = new BuildSymbolTableVisitor();
@@ -61,8 +61,7 @@ public class Main {
             Tree.Print irPrinter = new Tree.Print(System.out);
 
             while (f != null) {
-                if (f instanceof Translate.ProcFrag) {
-                    Translate.ProcFrag proc = (Translate.ProcFrag) f;
+                if (f instanceof Translate.ProcFrag proc) {
                     System.out.println("Metodo: " + proc.frame.name.toString());
                     irPrinter.prStm(proc.body);
                     System.out.println("---------------------------------------------");
