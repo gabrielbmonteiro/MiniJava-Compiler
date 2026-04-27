@@ -89,8 +89,46 @@ public class MipsFrame extends Frame implements TempMap {
     }
 
     @Override
-    public Stm procEntryExit1(Stm body) {
-        return body;
+    public Tree.Stm procEntryExit1(Tree.Stm body) {
+        Temp[] argRegs = {A0, A1, A2, A3};
+        Tree.Stm viewShift = null;
+
+        for (int i = 0; i < formals.size(); i++) {
+            if (i < argRegs.length) {
+                Tree.Exp dst = formals.get(i).exp(new Tree.TEMP(FP));
+                Tree.Exp src = new Tree.TEMP(argRegs[i]);
+                Tree.Stm move = new Tree.MOVE(dst, src);
+
+                if (viewShift == null) {
+                    viewShift = move;
+                } else {
+                    viewShift = new Tree.SEQ(viewShift, move);
+                }
+            } else {
+                // Argumentos excedentes (i >= 4) vêm pela pilha do chamador.
+                Tree.Exp dst = formals.get(i).exp(new Tree.TEMP(FP));
+
+                Tree.Exp src = new Tree.MEM(
+                        new Tree.BINOP(Tree.BINOP.PLUS,
+                                new Tree.TEMP(FP),
+                                new Tree.CONST(i * wordSize())
+                        )
+                );
+
+                // instrução para puxar da pilha para a variável local
+                Tree.Stm move = new Tree.MOVE(dst, src);
+
+                if (viewShift == null) {
+                    viewShift = move;
+                } else {
+                    viewShift = new Tree.SEQ(viewShift, move);
+                }
+            }
+        }
+
+        if (viewShift == null) return body;
+
+        return new Tree.SEQ(viewShift, body);
     }
 
     @Override
@@ -134,6 +172,7 @@ public class MipsFrame extends Frame implements TempMap {
 
         return body;
     }
+
     @Override
     public String tempMap(Temp t) {
         if (t == FP) return "$fp";
