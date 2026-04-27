@@ -33,8 +33,6 @@ As principais barreiras técnicas superadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela implementação dos Visitors (`BuildSymbolTableVisitor` e `TypeCheckVisitor`), resolução das lógicas de escopo achatado, implementação de checagem de tipos (subtipagem, proteção contra ciclos) e integração com a AST
-* **Albert Moren Paulino da Anunciação:** [A preencher]
-* **Antônio Kevin Carvalho Primo:** [A preencher]
 
 ## 🚀 Como Executar o Projeto
 
