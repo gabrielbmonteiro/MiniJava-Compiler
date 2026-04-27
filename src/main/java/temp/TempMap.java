@@ -1,4 +1,4 @@
 package temp;
 
-public interface TempMap {public String tempMap(Temp t);}
+public interface TempMap {String tempMap(Temp t);}
 

@@ -29,20 +29,17 @@ public class Codegen {
             munchMove((tree.MOVE) s);
         } else if (s instanceof tree.EXPR) {
             munchExp(((tree.EXPR) s).exp);
-        } else if (s instanceof tree.JUMP) {
-            tree.JUMP j = (tree.JUMP) s;
+        } else if (s instanceof tree.JUMP j) {
             emit(new assem.OPER("j `j0", null, null, j.targets));
         } else if (s instanceof tree.CJUMP) {
             munchCjump((tree.CJUMP) s);
-        } else if (s instanceof tree.LABEL) {
-            tree.LABEL l = (tree.LABEL) s;
+        } else if (s instanceof tree.LABEL l) {
             emit(new assem.LABEL(l.label.toString() + ":", l.label));
         }
     }
 
     private void munchMove(tree.MOVE s) {
-        if (s.dst instanceof tree.MEM) {
-            tree.MEM mem = (tree.MEM) s.dst;
+        if (s.dst instanceof tree.MEM mem) {
             if (mem.exp instanceof tree.BINOP && ((tree.BINOP) mem.exp).binop == tree.BINOP.PLUS
                     && ((tree.BINOP) mem.exp).right instanceof tree.CONST) {
 
@@ -81,8 +78,7 @@ public class Codegen {
 
     /* --- Munch Expressions --- */
     public temp.Temp munchExp(tree.Exp e) {
-        if (e instanceof tree.MEM) {
-            tree.MEM mem = (tree.MEM) e;
+        if (e instanceof tree.MEM mem) {
             temp.Temp r = new temp.Temp();
             if (mem.exp instanceof tree.BINOP && ((tree.BINOP) mem.exp).binop == tree.BINOP.PLUS
                     && ((tree.BINOP) mem.exp).right instanceof tree.CONST) {
