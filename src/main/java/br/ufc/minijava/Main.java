@@ -7,11 +7,11 @@ import br.ufc.minijava.parser.TokenMgrError;
 import syntaxtree.Program;
 import semantic.BuildSymbolTableVisitor;
 import semantic.TypeCheckVisitor;
-import Frame.Frame;
-import Mips.MipsFrame;
-import Translate.Frag;
-import Translate.ProcFrag;
-import Translate.DataFrag;
+import frame.Frame;
+import mips.MipsFrame;
+import translate.Frag;
+import translate.ProcFrag;
+import translate.DataFrag;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -59,29 +59,29 @@ public class Main {
             System.out.println("\n=== SELECAO DE INSTRUCOES MIPS (N4) ===");
             Frag f = fragments;
 
-            Temp.TempMap tempMap = new Temp.CombineMap((MipsFrame) mipsFrame, new Temp.DefaultMap());
+            temp.TempMap tempMap = new temp.CombineMap((MipsFrame) mipsFrame, new temp.DefaultMap());
 
             while (f != null) {
                 if (f instanceof ProcFrag proc) {
                     System.out.println("\n>>> Metodo: " + proc.frame.name.toString());
 
                     // 4.1 Canonização: Lineariza a árvore, agrupa em blocos básicos e ordena os saltos (TraceSchedule)
-                    Tree.StmList stms = Canon.Canon.linearize(proc.body);
-                    Canon.BasicBlocks b = new Canon.BasicBlocks(stms);
-                    Tree.StmList traced = new Canon.TraceSchedule(b).stms;
+                    tree.StmList stms = canon.Canon.linearize(proc.body);
+                    canon.BasicBlocks b = new canon.BasicBlocks(stms);
+                    tree.StmList traced = new canon.TraceSchedule(b).stms;
 
                     // 4.2 Seleção de Instruções (Maximal Munch)
-                    Mips.Codegen codegen = new Mips.Codegen((MipsFrame) proc.frame);
-                    for (Tree.StmList s = traced; s != null; s = s.tail) {
+                    mips.Codegen codegen = new mips.Codegen((MipsFrame) proc.frame);
+                    for (tree.StmList s = traced; s != null; s = s.tail) {
                         codegen.munchStm(s.head);
                     }
 
                     // 4.3 Aplicar o Liveness Sink
-                    Assem.InstrList instrs = codegen.getInstrList();
+                    assem.InstrList instrs = codegen.getInstrList();
                     instrs = proc.frame.procEntryExit2(instrs);
 
                     // 4.4 Formatação e Impressão do Assembly
-                    for (Assem.InstrList i = instrs; i != null; i = i.tail) {
+                    for (assem.InstrList i = instrs; i != null; i = i.tail) {
                         if (!i.head.assem.equals("")) {
                             System.out.println(i.head.format(tempMap));
                         }
