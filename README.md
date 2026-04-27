@@ -33,8 +33,6 @@ As principais barreiras técnicas superadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela implementação completa da classe `Codegen.java`, mapeamento da arquitetura de registradores MIPS no MipsFrame (`calldefs`, `$a0-$a3`), implementação de "View Shift" via `procEntryExit1` e "Liveness Sink" via `procEntryExit2`, resolução de passagens de parâmetros longos (>4 args) via Pilha, e integração do pacote `Canon` no loop principal.
-* **Albert Moren Paulino da Anunciação:** [A preencher]
-* **Antônio Kevin Carvalho Primo:** [A preencher]
 
 ## 🚀 Como Executar o Projeto
 
