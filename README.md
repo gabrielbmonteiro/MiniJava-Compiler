@@ -37,8 +37,6 @@ As principais barreiras técnicas superadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela implementação completa do `TranslateVisitor`, lógicas de escopo em memória (offsets e herança), abstração dos nós `Nx`/`Ex`/`Cx`, implementação de VTables e Dynamic Dispatch, sincronização de convenções MIPS (`RV` e `FP`) e estruturação da bateria de testes.
-* **Albert Moren Paulino da Anunciação:** [A preencher]
-* **Antônio Kevin Carvalho Primo:** [A preencher]
 
 ## 🚀 Como Executar o Projeto
 
