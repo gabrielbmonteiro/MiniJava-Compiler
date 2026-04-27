@@ -20,8 +20,8 @@ public class Main {
 
         try {
             FileInputStream ficheiro = new FileInputStream(args[0]);
-            MiniJavaParser parser = new MiniJavaParser(ficheiro);
-            Program root = parser.Program();
+            new MiniJavaParser(ficheiro);
+            Program root = MiniJavaParser.Program();
 
             // Passo 1 da Semântica: Percorre a AST para construir a Tabela de Símbolos
             BuildSymbolTableVisitor buildSymTab = new BuildSymbolTableVisitor();
@@ -41,6 +41,37 @@ public class Main {
                 System.err.println("\nAnalise concluida. Foram encontrados " + typeCheck.getQuantidadeErros() + " erro(s) semantico(s).");
             } else {
                 System.out.println("\nAnalise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
+            }
+
+            // 1. Instancia a fábrica de Frames do MIPS
+            Frame.Frame mipsFrame = new Mips.MipsFrame();
+
+            // 2. Instancia o visitante de tradução passando o frame e a sua tabela de símbolos da N2
+            visitor.TranslateVisitor translateVisitor = new visitor.TranslateVisitor(mipsFrame, buildSymTab.getTable());
+
+            // 3. Inicia a tradução a partir da raiz da AST
+            root.accept(translateVisitor);
+
+            // 4. Recupera a lista de fragmentos gerados
+            Translate.Frag fragments = translateVisitor.getResult();
+
+            // 5. Imprime a Árvore IR de cada método
+            System.out.println("=== ARVORES DE REPRESENTACAO INTERMEDIARIA (IR) ===");
+            Translate.Frag f = fragments;
+            Tree.Print irPrinter = new Tree.Print(System.out);
+
+            while (f != null) {
+                if (f instanceof Translate.ProcFrag proc) {
+                    System.out.println("Metodo: " + proc.frame.name.toString());
+                    irPrinter.prStm(proc.body);
+                    System.out.println("---------------------------------------------");
+                }
+                else if (f instanceof Translate.DataFrag data) {
+                    System.out.println(">>> Dados na Memoria (VTable):");
+                    System.out.print(data.data);
+                    System.out.println("---------------------------------------------");
+                }
+                f = f.next;
             }
 
         } catch (FileNotFoundException e) {
