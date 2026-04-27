@@ -7,11 +7,13 @@ import br.ufc.minijava.parser.TokenMgrError;
 import syntaxtree.Program;
 import semantic.BuildSymbolTableVisitor;
 import semantic.TypeCheckVisitor;
-import frame.Frame;
 import mips.MipsFrame;
 import translate.Frag;
 import translate.ProcFrag;
 import translate.DataFrag;
+import flowgraph.AssemFlowGraph;
+import regalloc.Liveness;
+import regalloc.Color;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -49,17 +51,17 @@ public class Main {
             }
 
             // Passo 3: Geração da Árvore Intermédia (IR)
-            Frame mipsFrame = new MipsFrame();
+            MipsFrame mipsFrame = new MipsFrame();
             visitor.TranslateVisitor translateVisitor = new visitor.TranslateVisitor(mipsFrame, buildSymTab.getTable());
             root.accept(translateVisitor);
 
             Frag fragments = translateVisitor.getResult();
 
-            // Passo 4: Canonização e Seleção de Instruções
-            System.out.println("\n=== SELECAO DE INSTRUCOES MIPS (N4) ===");
+            // Passos 4 e 5: Canonização, Seleção de Instruções e Alocação
+            System.out.println("\n=== SELECAO E ALOCACAO DE REGISTRADORES MIPS (N4 & N5) ===");
             Frag f = fragments;
 
-            temp.TempMap tempMap = new temp.CombineMap((MipsFrame) mipsFrame, new temp.DefaultMap());
+            temp.TempMap baseTempMap = new temp.CombineMap(mipsFrame, new temp.DefaultMap());
 
             while (f != null) {
                 if (f instanceof ProcFrag proc) {
@@ -80,10 +82,28 @@ public class Main {
                     assem.InstrList instrs = codegen.getInstrList();
                     instrs = proc.frame.procEntryExit2(instrs);
 
-                    // 4.4 Formatação e Impressão do Assembly
+                    System.out.println("--- Iniciando Alocacao de Registradores (N5) ---");
+
+                    AssemFlowGraph flowGraph = new AssemFlowGraph(instrs);
+                    Liveness liveness = new Liveness(flowGraph);
+                    Color allocator = new Color(liveness, (MipsFrame) proc.frame, proc.frame.registers());
+
+                    temp.TempMap finalTempMap;
+                    if (allocator.spills() != null) {
+                        System.err.println("[AVISO] Ocorreu SPILL neste metodo! Temporarios necessitam de ir para a memoria.");
+                        finalTempMap = baseTempMap;
+                    } else {
+                        System.out.println("[SUCESSO] Alocacao concluida sem spills.");
+                        finalTempMap = allocator;
+                    }
+
+                    // 5.1 Embrulhar as instruções finais
+                    instrs = proc.frame.procEntryExit3(instrs);
+
+                    // 5.2 Formatação e Impressão do Assembly Final
                     for (assem.InstrList i = instrs; i != null; i = i.tail) {
-                        if (!i.head.assem.equals("")) {
-                            System.out.println(i.head.format(tempMap));
+                        if (!i.head.assem.isEmpty()) {
+                            System.out.println(i.head.format(finalTempMap));
                         }
                     }
                     System.out.println("---------------------------------------------");
@@ -121,4 +141,5 @@ public class Main {
             System.err.println("--------------------------------------------------");
         }
     }
+
 }

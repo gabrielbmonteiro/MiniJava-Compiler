@@ -196,4 +196,47 @@ public class MipsFrame extends Frame implements TempMap {
         return null;
     }
 
+    @Override
+    public TempList registers() {
+        return new TempList(T0,
+                new TempList(T1,
+                        new TempList(T2,
+                                new TempList(T3,
+                                        new TempList(T4,
+                                                new TempList(T5,
+                                                        new TempList(T6,
+                                                                new TempList(T7,
+                                                                        new TempList(T8,
+                                                                                new TempList(T9, null))))))))));
+    }
+
+    @Override
+    public assem.InstrList procEntryExit3(assem.InstrList body) {
+        int frameSize = (-this.localOffset) + 8;
+
+        String prolog = this.name.toString() + ":\n" +
+                "  sw $fp, -4($sp)\n" +
+                "  sw $ra, -8($sp)\n" +
+                "  subu $sp, $sp, " + frameSize + "\n" +
+                "  addu $fp, $sp, " + frameSize;
+
+        String epilog = "  lw $ra, -8($fp)\n" +
+                "  lw $fp, -4($fp)\n" +
+                "  addu $sp, $sp, " + frameSize + "\n" +
+                "  jr $ra\n";
+
+        assem.Instr prInstr = new assem.OPER(prolog, null, null);
+        assem.Instr epInstr = new assem.OPER(epilog, null, null);
+
+        assem.InstrList list = new assem.InstrList(prInstr, body);
+
+        assem.InstrList tail = list;
+        while (tail.tail != null) {
+            tail = tail.tail;
+        }
+        tail.tail = new assem.InstrList(epInstr, null);
+
+        return list;
+    }
+
 }

@@ -27,4 +27,8 @@ public abstract class Frame {
 
     public abstract assem.InstrList procEntryExit2(assem.InstrList body);
 
+    public abstract TempList registers();
+
+    public abstract assem.InstrList procEntryExit3(assem.InstrList body);
+
 }
