@@ -7,6 +7,11 @@ import br.ufc.minijava.parser.TokenMgrError;
 import syntaxtree.Program;
 import semantic.BuildSymbolTableVisitor;
 import semantic.TypeCheckVisitor;
+import frame.Frame;
+import mips.MipsFrame;
+import translate.Frag;
+import translate.ProcFrag;
+import translate.DataFrag;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -23,51 +28,68 @@ public class Main {
             new MiniJavaParser(ficheiro);
             Program root = MiniJavaParser.Program();
 
-            // Passo 1 da Semântica: Percorre a AST para construir a Tabela de Símbolos
+            // Passo 1: Construção da Tabela de Símbolos
             BuildSymbolTableVisitor buildSymTab = new BuildSymbolTableVisitor();
             root.accept(buildSymTab);
 
-            // checar se existem duplicatas
             if (buildSymTab.getQuantidadeErros() > 0) {
                 System.err.println("\nAnalise concluida. Foram encontrados " + buildSymTab.getQuantidadeErros() + " erro(s) de declaracao.");
                 return;
             }
 
-            // Passo 2 da Semântica: Percorre a AST verificando os tipos usando a tabela criada
+            // Passo 2: Verificação de Tipos
             TypeCheckVisitor typeCheck = new TypeCheckVisitor(buildSymTab.getTable());
             root.accept(typeCheck);
 
             if (typeCheck.getQuantidadeErros() > 0) {
                 System.err.println("\nAnalise concluida. Foram encontrados " + typeCheck.getQuantidadeErros() + " erro(s) semantico(s).");
+                return;
             } else {
                 System.out.println("\nAnalise concluida com sucesso! Nenhum erro lexico, sintatico ou semantico.");
             }
 
-            // 1. Instancia a fábrica de Frames do MIPS
-            Frame.Frame mipsFrame = new Mips.MipsFrame();
-
-            // 2. Instancia o visitante de tradução passando o frame e a sua tabela de símbolos da N2
+            // Passo 3: Geração da Árvore Intermédia (IR)
+            Frame mipsFrame = new MipsFrame();
             visitor.TranslateVisitor translateVisitor = new visitor.TranslateVisitor(mipsFrame, buildSymTab.getTable());
-
-            // 3. Inicia a tradução a partir da raiz da AST
             root.accept(translateVisitor);
 
-            // 4. Recupera a lista de fragmentos gerados
-            Translate.Frag fragments = translateVisitor.getResult();
+            Frag fragments = translateVisitor.getResult();
 
-            // 5. Imprime a Árvore IR de cada método
-            System.out.println("=== ARVORES DE REPRESENTACAO INTERMEDIARIA (IR) ===");
-            Translate.Frag f = fragments;
-            Tree.Print irPrinter = new Tree.Print(System.out);
+            // Passo 4: Canonização e Seleção de Instruções
+            System.out.println("\n=== SELECAO DE INSTRUCOES MIPS (N4) ===");
+            Frag f = fragments;
+
+            temp.TempMap tempMap = new temp.CombineMap((MipsFrame) mipsFrame, new temp.DefaultMap());
 
             while (f != null) {
-                if (f instanceof Translate.ProcFrag proc) {
-                    System.out.println("Metodo: " + proc.frame.name.toString());
-                    irPrinter.prStm(proc.body);
+                if (f instanceof ProcFrag proc) {
+                    System.out.println("\n>>> Metodo: " + proc.frame.name.toString());
+
+                    // 4.1 Canonização: Lineariza a árvore, agrupa em blocos básicos e ordena os saltos (TraceSchedule)
+                    tree.StmList stms = canon.Canon.linearize(proc.body);
+                    canon.BasicBlocks b = new canon.BasicBlocks(stms);
+                    tree.StmList traced = new canon.TraceSchedule(b).stms;
+
+                    // 4.2 Seleção de Instruções (Maximal Munch)
+                    mips.Codegen codegen = new mips.Codegen((MipsFrame) proc.frame);
+                    for (tree.StmList s = traced; s != null; s = s.tail) {
+                        codegen.munchStm(s.head);
+                    }
+
+                    // 4.3 Aplicar o Liveness Sink
+                    assem.InstrList instrs = codegen.getInstrList();
+                    instrs = proc.frame.procEntryExit2(instrs);
+
+                    // 4.4 Formatação e Impressão do Assembly
+                    for (assem.InstrList i = instrs; i != null; i = i.tail) {
+                        if (!i.head.assem.equals("")) {
+                            System.out.println(i.head.format(tempMap));
+                        }
+                    }
                     System.out.println("---------------------------------------------");
-                }
-                else if (f instanceof Translate.DataFrag data) {
-                    System.out.println(">>> Dados na Memoria (VTable):");
+
+                } else if (f instanceof DataFrag data) {
+                    System.out.println("\n>>> Dados na Memoria (VTable):");
                     System.out.print(data.data);
                     System.out.println("---------------------------------------------");
                 }
