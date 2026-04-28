@@ -90,7 +90,7 @@ public class Main {
 
                         AssemFlowGraph flowGraph = new AssemFlowGraph(instrs);
                         Liveness liveness = new Liveness(flowGraph);
-                        Color allocator = new Color(liveness, (MipsFrame) proc.frame, ((MipsFrame) proc.frame).registers());
+                        Color allocator = new Color(liveness, (MipsFrame) proc.frame, proc.frame.registers());
 
                         if (allocator.spills() != null) {
                             System.err.println("\n[AVISO] Ocorreu SPILL! A reescrever o programa e a alocar na memoria...");
@@ -102,8 +102,8 @@ public class Main {
                         }
                     }
 
-                    // 5.1 Embrulhar as instruções finais com o Prólogo e Epílogo MIPS
-                    instrs = proc.frame.procEntryExit3(instrs);
+                    // 5.1 Embrulhar as instruções finais com o Prólogo e Epílogo MIPS e aplicar PeepHole
+                    instrs = applyPeephole(proc.frame.procEntryExit3(instrs),finalTempMap);
 
                     // 5.2 Formatação e Impressão do Assembly Final
                     for (assem.InstrList i = instrs; i != null; i = i.tail) {
@@ -217,6 +217,36 @@ public class Main {
             }
         }
 
+        return head;
+    }
+
+    private static assem.InstrList applyPeephole(assem.InstrList instrs, temp.TempMap tempMap) {
+        assem.InstrList head = null;
+        assem.InstrList tail = null;
+
+        for (assem.InstrList il = instrs; il != null; il = il.tail) {
+            assem.Instr instr = il.head;
+            boolean isRedundantMove = false;
+
+            if (instr instanceof assem.MOVE) {
+                temp.TempList defs = instr.def();
+                temp.TempList uses = instr.use();
+
+                if (defs != null && uses != null && defs.head != null && uses.head != null) {
+                    String defReg = tempMap.tempMap(defs.head);
+                    String useReg = tempMap.tempMap(uses.head);
+
+                    if (defReg != null && defReg.equals(useReg)) {
+                        isRedundantMove = true;
+                    }
+                }
+            }
+
+            if (!isRedundantMove) {
+                if (head == null) { head = new assem.InstrList(instr, null); tail = head; }
+                else { tail.tail = new assem.InstrList(instr, null); tail = tail.tail; }
+            }
+        }
         return head;
     }
 

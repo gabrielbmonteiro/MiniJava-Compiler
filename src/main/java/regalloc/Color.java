@@ -23,6 +23,8 @@ public class Color implements TempMap {
     private Set<Node> spillWorklist = new HashSet<>();
     private Map<Node, Integer> degree = new HashMap<>();
 
+    private Map<Node, Node> alias = new HashMap<>();    // Mapeamento de nós fundidos
+
     public Color(InterferenceGraph ig, TempMap initial, TempList registers) {
         this.ig = ig;
         this.initialAllocation = initial;
@@ -63,7 +65,12 @@ public class Color implements TempMap {
     // Passo 2: Esvaziar as listas empilhando os nós
     private void makeWork() {
         while (!simplifyWorklist.isEmpty() || !spillWorklist.isEmpty()) {
-            if (!simplifyWorklist.isEmpty()) {
+            // Tenta Coalescer primeiro se possível! (Isso poupa cores)
+            boolean coalesced = coalesceMoves();
+
+            if (coalesced) {
+                continue;
+            } else if (!simplifyWorklist.isEmpty()) {
                 simplify();
             } else {
                 spill();
@@ -147,6 +154,21 @@ public class Color implements TempMap {
                 spills = new TempList(t, spills);
             }
         }
+
+        for (NodeList nl = ig.nodes(); nl != null; nl = nl.tail) {
+            Node n = nl.head;
+            Node aliasNode = getAlias(n);
+
+            if (n != aliasNode) {
+                Temp nTemp = ig.gtemp(n);
+                Temp aliasTemp = ig.gtemp(aliasNode);
+
+                Temp color = initialAllocation.tempMap(aliasTemp) != null ? aliasTemp : colorMap.get(aliasTemp);
+                if (color != null) {
+                    colorMap.put(nTemp, color);
+                }
+            }
+        }
     }
 
     public TempList spills() {
@@ -161,6 +183,64 @@ public class Color implements TempMap {
             return realName != null ? realName : color.toString();
         }
         return initialAllocation.tempMap(t); // Fallback
+    }
+
+    private boolean coalesceMoves() {
+        boolean madeProgress = false;
+        MoveList moves = ig.moves();
+
+        for (MoveList m = moves; m != null; m = m.tail) {
+            Node src = m.src;
+            Node dst = m.dst;
+
+            src = getAlias(src);
+            dst = getAlias(dst);
+
+            if (src == dst || (isPrecolored(src) && isPrecolored(dst))) {
+                continue;
+            }
+
+            if (!src.adj(dst)) {
+
+                if (degree.getOrDefault(src, 0) + degree.getOrDefault(dst, 0) < K) {
+
+                    if (isPrecolored(dst)) {
+                        combineNodes(dst, src);
+                    } else {
+                        combineNodes(src, dst);
+                    }
+
+                    madeProgress = true;
+                    break;
+                }
+            }
+        }
+        return madeProgress;
+    }
+
+    private Node getAlias(Node n) {
+        if (alias.containsKey(n)) {
+            return getAlias(alias.get(n));
+        }
+        return n;
+    }
+
+    private boolean isPrecolored(Node n) {
+        Temp t = ig.gtemp(n);
+        return initialAllocation.tempMap(t) != null;
+    }
+
+    private void combineNodes(Node u, Node v) {
+        if (simplifyWorklist.contains(v)) simplifyWorklist.remove(v);
+        if (spillWorklist.contains(v)) spillWorklist.remove(v);
+
+        alias.put(v, u);
+
+        for (NodeList adj = v.adj(); adj != null; adj = adj.tail) {
+            Node m = adj.head;
+            ig.addEdge(u, m);
+            degree.put(u, degree.getOrDefault(u, 0) + 1);
+        }
     }
 
 }
