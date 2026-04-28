@@ -61,8 +61,6 @@ public class Main {
             System.out.println("\n=== SELECAO E ALOCACAO DE REGISTRADORES MIPS (N4 & N5) ===");
             Frag f = fragments;
 
-            temp.TempMap baseTempMap = new temp.CombineMap(mipsFrame, new temp.DefaultMap());
-
             while (f != null) {
                 if (f instanceof ProcFrag proc) {
                     System.out.println("\n>>> Metodo: " + proc.frame.name.toString());
@@ -84,9 +82,6 @@ public class Main {
 
                     System.out.println("\n--- Iniciando Alocacao de Registradores (N5) ---");
 
-                    // =================================================================
-                    // INICIO DA ETAPA N5: ALOCACAO DE REGISTADORES
-                    // =================================================================
                     boolean alocacaoConcluida = false;
                     temp.TempMap finalTempMap = null;
 
