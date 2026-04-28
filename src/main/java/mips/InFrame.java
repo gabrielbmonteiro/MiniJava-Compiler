@@ -19,4 +19,9 @@ public class InFrame extends Access {
                 new BINOP(BINOP.PLUS, framePtr, new CONST(offset))
         );
     }
+
+    public int getOffset() {
+        return offset;
+    }
+
 }

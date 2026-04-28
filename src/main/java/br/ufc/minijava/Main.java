@@ -82,22 +82,32 @@ public class Main {
                     assem.InstrList instrs = codegen.getInstrList();
                     instrs = proc.frame.procEntryExit2(instrs);
 
-                    System.out.println("--- Iniciando Alocacao de Registradores (N5) ---");
+                    System.out.println("\n--- Iniciando Alocacao de Registradores (N5) ---");
 
-                    AssemFlowGraph flowGraph = new AssemFlowGraph(instrs);
-                    Liveness liveness = new Liveness(flowGraph);
-                    Color allocator = new Color(liveness, (MipsFrame) proc.frame, proc.frame.registers());
+                    // =================================================================
+                    // INICIO DA ETAPA N5: ALOCACAO DE REGISTADORES
+                    // =================================================================
+                    boolean alocacaoConcluida = false;
+                    temp.TempMap finalTempMap = null;
 
-                    temp.TempMap finalTempMap;
-                    if (allocator.spills() != null) {
-                        System.err.println("[AVISO] Ocorreu SPILL neste metodo! Temporarios necessitam de ir para a memoria.");
-                        finalTempMap = baseTempMap;
-                    } else {
-                        System.out.println("[SUCESSO] Alocacao concluida sem spills.");
-                        finalTempMap = allocator;
+                    while (!alocacaoConcluida) {
+                        System.out.println("\n--- Tentativa de Alocacao de Registadores (N5) ---");
+
+                        AssemFlowGraph flowGraph = new AssemFlowGraph(instrs);
+                        Liveness liveness = new Liveness(flowGraph);
+                        Color allocator = new Color(liveness, (MipsFrame) proc.frame, ((MipsFrame) proc.frame).registers());
+
+                        if (allocator.spills() != null) {
+                            System.err.println("\n[AVISO] Ocorreu SPILL! A reescrever o programa e a alocar na memoria...");
+                            instrs = rewriteProgram(instrs, allocator.spills(), proc.frame);
+                        } else {
+                            System.out.println("\n[SUCESSO] Alocacao concluida sem spills.");
+                            finalTempMap = allocator;
+                            alocacaoConcluida = true;
+                        }
                     }
 
-                    // 5.1 Embrulhar as instruções finais
+                    // 5.1 Embrulhar as instruções finais com o Prólogo e Epílogo MIPS
                     instrs = proc.frame.procEntryExit3(instrs);
 
                     // 5.2 Formatação e Impressão do Assembly Final
@@ -106,12 +116,12 @@ public class Main {
                             System.out.println(i.head.format(finalTempMap));
                         }
                     }
-                    System.out.println("---------------------------------------------");
+                    System.out.println("\n---------------------------------------------");
 
                 } else if (f instanceof DataFrag data) {
                     System.out.println("\n>>> Dados na Memoria (VTable):");
                     System.out.print(data.data);
-                    System.out.println("---------------------------------------------");
+                    System.out.println("\n---------------------------------------------");
                 }
                 f = f.next;
             }
@@ -140,6 +150,79 @@ public class Main {
             System.err.println("-> " + e.getMessage());
             System.err.println("--------------------------------------------------");
         }
+    }
+
+    private static assem.InstrList rewriteProgram(assem.InstrList instrs, temp.TempList spills, frame.Frame frame) {
+        java.util.Set<temp.Temp> spillSet = new java.util.HashSet<>();
+        for (temp.TempList sl = spills; sl != null; sl = sl.tail) {
+            spillSet.add(sl.head);
+        }
+
+        java.util.Map<temp.Temp, Integer> spillOffsets = new java.util.HashMap<>();
+        for (temp.Temp t : spillSet) {
+            frame.Access access = frame.allocLocal(true);
+
+            int offset = ((mips.InFrame) access).getOffset() ;
+            spillOffsets.put(t, offset);
+        }
+
+        assem.InstrList head = null;
+        assem.InstrList tail = null;
+
+        for (assem.InstrList il = instrs; il != null; il = il.tail) {
+            assem.Instr instr = il.head;
+
+            temp.TempList uses = instr.use();
+            temp.TempList defs = instr.def();
+
+            java.util.Map<temp.Temp, temp.Temp> tempMapForInstr = new java.util.HashMap<>();
+
+            // 1. Processar USOS
+            for (temp.TempList u = uses; u != null; u = u.tail) {
+                if (spillSet.contains(u.head)) {
+                    temp.Temp spilled = u.head;
+                    if (!tempMapForInstr.containsKey(spilled)) {
+                        temp.Temp newTemp = new temp.Temp();
+                        tempMapForInstr.put(spilled, newTemp);
+
+                        int offset = spillOffsets.get(spilled);
+                        assem.Instr load = new assem.OPER("  lw `d0, " + offset + "($fp)",
+                                new temp.TempList(newTemp, null), null);
+
+                        if (head == null) { head = new assem.InstrList(load, null); tail = head; }
+                        else { tail.tail = new assem.InstrList(load, null); tail = tail.tail; }
+                    }
+                    u.head = tempMapForInstr.get(spilled);
+                }
+            }
+
+            // 2. Anexar a instrução original
+            if (head == null) { head = new assem.InstrList(instr, null); tail = head; }
+            else { tail.tail = new assem.InstrList(instr, null); tail = tail.tail; }
+
+            // 3. Processar DEFINIÇÕES
+            for (temp.TempList d = defs; d != null; d = d.tail) {
+                if (spillSet.contains(d.head)) {
+                    temp.Temp spilled = d.head;
+
+                    if (!tempMapForInstr.containsKey(spilled)) {
+                        temp.Temp newTemp = new temp.Temp();
+                        tempMapForInstr.put(spilled, newTemp);
+                    }
+                    temp.Temp newTemp = tempMapForInstr.get(spilled);
+                    d.head = newTemp;
+
+                    int offset = spillOffsets.get(spilled);
+                    assem.Instr store = new assem.OPER("  sw `s0, " + offset + "($fp)",
+                            null, new temp.TempList(newTemp, null));
+
+                    tail.tail = new assem.InstrList(store, null);
+                    tail = tail.tail;
+                }
+            }
+        }
+
+        return head;
     }
 
 }

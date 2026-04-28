@@ -23,6 +23,16 @@ public class MipsFrame extends Frame implements TempMap {
     public static final Temp A1 = new Temp();
     public static final Temp A2 = new Temp();
     public static final Temp A3 = new Temp();
+
+    private static final Temp S0 = new Temp();
+    private static final Temp S1 = new Temp();
+    private static final Temp S2 = new Temp();
+    private static final Temp S3 = new Temp();
+    private static final Temp S4 = new Temp();
+    private static final Temp S5 = new Temp();
+    private static final Temp S6 = new Temp();
+    private static final Temp S7 = new Temp();
+
     private static final Temp V1 = new Temp(); // $v1
     private static final Temp T0 = new Temp(); // $t0
     private static final Temp T1 = new Temp(); // $t1
@@ -118,11 +128,7 @@ public class MipsFrame extends Frame implements TempMap {
                 // instrução para puxar da pilha para a variável local
                 tree.Stm move = new tree.MOVE(dst, src);
 
-                if (viewShift == null) {
-                    viewShift = move;
-                } else {
-                    viewShift = new tree.SEQ(viewShift, move);
-                }
+                viewShift = new tree.SEQ(viewShift, move);
             }
         }
 
@@ -193,26 +199,28 @@ public class MipsFrame extends Frame implements TempMap {
         if (t == T8) return "$t8";
         if (t == T9) return "$t9";
         if (t == RA) return "$ra";
+        if (t == S0) return "$s0";
+        if (t == S1) return "$s1";
+        if (t == S2) return "$s2";
+        if (t == S3) return "$s3";
+        if (t == S4) return "$s4";
+        if (t == S5) return "$s5";
+        if (t == S6) return "$s6";
+        if (t == S7) return "$s7";
         return null;
     }
 
     @Override
     public TempList registers() {
-        return new TempList(T0,
-                new TempList(T1,
-                        new TempList(T2,
-                                new TempList(T3,
-                                        new TempList(T4,
-                                                new TempList(T5,
-                                                        new TempList(T6,
-                                                                new TempList(T7,
-                                                                        new TempList(T8,
-                                                                                new TempList(T9, null))))))))));
+        return new TempList(T0, new TempList(T1, new TempList(T2, new TempList(T3, new TempList(T4,
+                new TempList(T5, new TempList(T6, new TempList(T7, new TempList(T8, new TempList(T9, new TempList(S0, new TempList(S1,
+                        new TempList(S2, new TempList(S3, new TempList(S4, new TempList(S5, new TempList(S6, new TempList(S7, null)
+                        )))))))))))))))));
     }
 
     @Override
     public assem.InstrList procEntryExit3(assem.InstrList body) {
-        int frameSize = (-this.localOffset) + 8;
+        int frameSize = (-this.localOffset) + 32;
 
         String prolog = this.name.toString() + ":\n" +
                 "  sw $fp, -4($sp)\n" +
