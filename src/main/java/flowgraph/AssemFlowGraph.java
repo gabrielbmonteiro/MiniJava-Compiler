@@ -16,8 +16,8 @@ import java.util.HashMap;
 
 public class AssemFlowGraph extends FlowGraph {
 
-    private HashMap<Node, Instr> instrMap = new HashMap<>();
-    private HashMap<Label, Node> labelMap = new HashMap<>();
+    private final HashMap<Node, Instr> instrMap = new HashMap<>();
+    private final HashMap<Label, Node> labelMap = new HashMap<>();
 
     public AssemFlowGraph(InstrList instrs) {
         // 1ª: Criar os nós e preencher os mapas
@@ -63,7 +63,7 @@ public class AssemFlowGraph extends FlowGraph {
 
     private boolean isUnconditionalJump(Instr instr) {
         if (instr instanceof OPER) {
-            String assem = ((OPER) instr).assem;
+            String assem = instr.assem;
             return assem.trim().startsWith("j ");
         }
         return false;
@@ -84,7 +84,4 @@ public class AssemFlowGraph extends FlowGraph {
         return instrMap.get(node) instanceof MOVE;
     }
 
-    public Instr instr(Node n) {
-        return instrMap.get(n);
-    }
 }
