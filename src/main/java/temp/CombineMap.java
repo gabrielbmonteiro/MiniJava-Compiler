@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 public class CombineMap implements TempMap {
 	TempMap tmap1, tmap2;

@@ -1,6 +1,6 @@
-package tree;
-import temp.Label;
-import temp.LabelList;
+package Tree;
+import Temp.Label;
+import Temp.LabelList;
 
 public class JUMP extends Stm {
   public Exp exp;

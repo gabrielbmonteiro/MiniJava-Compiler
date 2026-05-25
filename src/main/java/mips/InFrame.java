@@ -1,10 +1,10 @@
-package mips;
+package Mips;
 
-import frame.Access;
-import tree.BINOP;
-import tree.CONST;
-import tree.Exp;
-import tree.MEM;
+import Frame.Access;
+import Tree.BINOP;
+import Tree.CONST;
+import Tree.Exp;
+import Tree.MEM;
 
 public class InFrame extends Access {
     int offset;

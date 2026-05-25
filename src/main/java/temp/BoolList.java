@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 public class BoolList {
   public boolean head;

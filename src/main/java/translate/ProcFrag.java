@@ -1,12 +1,12 @@
-package translate;
+package Translate;
 
-import frame.Frame;
+import Frame.Frame;
 
 public class ProcFrag extends Frag {
-    public tree.Stm body;
+    public Tree.Stm body;
     public Frame frame;
 
-    public ProcFrag(tree.Stm body, Frame frame) {
+    public ProcFrag(Tree.Stm body, Frame frame) {
         this.body = body;
         this.frame = frame;
     }

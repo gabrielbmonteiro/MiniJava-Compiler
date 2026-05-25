@@ -1,5 +1,5 @@
-package tree;
-import temp.Label;
+package Tree;
+import Temp.Label;
 public class LABEL extends Stm { 
   public Label label;
   public LABEL(Label l) {label=l;}

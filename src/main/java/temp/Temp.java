@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 public class Temp  {
    private static int count;

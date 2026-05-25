@@ -1,4 +1,4 @@
-package tree;
+package Tree;
 
 public class SEQ extends Stm {
   public Stm left, right;

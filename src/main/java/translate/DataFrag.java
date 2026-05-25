@@ -1,4 +1,4 @@
-package translate;
+package Translate;
 
 public class DataFrag extends Frag {
     public String data;

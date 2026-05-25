@@ -1,4 +1,4 @@
-package tree;
+package Tree;
 
 // Renomeamos de EXP para EXPR para o Windows não reclamar
 public class EXPR extends Stm {

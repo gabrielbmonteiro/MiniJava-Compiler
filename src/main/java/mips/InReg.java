@@ -1,9 +1,9 @@
-package mips;
+package Mips;
 
-import frame.Access;
-import temp.Temp;
-import tree.Exp;
-import tree.TEMP;
+import Frame.Access;
+import Temp.Temp;
+import Tree.Exp;
+import Tree.TEMP;
 
 public class InReg extends Access {
     Temp temp;

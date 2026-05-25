@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 public class TempList {
    public Temp head;

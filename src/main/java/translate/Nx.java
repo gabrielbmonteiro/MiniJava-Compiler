@@ -1,24 +1,24 @@
-package translate;
+package Translate;
 
 public class Nx extends Exp {
-    tree.Stm stm;
+    Tree.Stm stm;
 
-    public Nx(tree.Stm s) {
+    public Nx(Tree.Stm s) {
         this.stm = s;
     }
 
     @Override
-    public tree.Exp unEx() {
+    public Tree.Exp unEx() {
         return null;
     }
 
     @Override
-    public tree.Stm unNx() {
+    public Tree.Stm unNx() {
         return stm;
     }
 
     @Override
-    public tree.Stm unCx(temp.Label t, temp.Label f) {
+    public Tree.Stm unCx(Temp.Label t, Temp.Label f) {
         return null;
     }
 }

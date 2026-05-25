@@ -1,7 +1,7 @@
-package tree;
+package Tree;
 
-import temp.DefaultMap;
-import temp.TempMap;
+import Temp.DefaultMap;
+import Temp.TempMap;
 
 public class Print {
 

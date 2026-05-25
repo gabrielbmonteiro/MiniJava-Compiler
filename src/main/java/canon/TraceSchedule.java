@@ -1,7 +1,7 @@
-package canon;
+package Canon;
 
-import temp.Label;
-import tree.*;
+import Temp.Label;
+import Tree.*;
 
 import java.util.Dictionary;
 import java.util.Hashtable;

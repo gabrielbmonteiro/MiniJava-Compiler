@@ -1,6 +1,6 @@
-package frame;
+package Frame;
 
-import tree.Exp;
+import Tree.Exp;
 
 public abstract class Access {
     public abstract Exp exp(Exp framePtr);

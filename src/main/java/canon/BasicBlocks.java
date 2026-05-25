@@ -1,7 +1,7 @@
-package canon;
+package Canon;
 
-import temp.Label;
-import tree.*;
+import Temp.Label;
+import Tree.*;
 
 public class BasicBlocks {
   public StmListList blocks;

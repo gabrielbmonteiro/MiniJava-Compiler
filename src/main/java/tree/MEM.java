@@ -1,4 +1,4 @@
-package tree;
+package Tree;
 
 public class MEM extends Exp {
   public Exp exp;

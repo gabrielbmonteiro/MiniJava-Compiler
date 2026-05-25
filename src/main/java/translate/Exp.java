@@ -1,9 +1,9 @@
-package translate;
+package Translate;
 
 public abstract class Exp {
-    public abstract tree.Exp unEx();
+    public abstract Tree.Exp unEx();
 
-    public abstract tree.Stm unNx();
+    public abstract Tree.Stm unNx();
 
-    public abstract tree.Stm unCx(temp.Label t, temp.Label f);
+    public abstract Tree.Stm unCx(Temp.Label t, Temp.Label f);
 }

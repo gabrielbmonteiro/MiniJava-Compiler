@@ -1,6 +1,6 @@
-package tree;
+package Tree;
 
-import temp.Temp;
+import Temp.Temp;
 
 public class TEMP extends Exp {
   public Temp temp;

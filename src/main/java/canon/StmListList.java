@@ -1,6 +1,6 @@
-package canon;
+package Canon;
 
-import tree.StmList;
+import Tree.StmList;
 
 public class StmListList {
   public StmList head;

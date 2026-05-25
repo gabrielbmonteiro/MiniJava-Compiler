@@ -1,5 +1,5 @@
-package tree;
-import temp.Label;
+package Tree;
+import Temp.Label;
 public class CJUMP extends Stm {
   public int relop;
   public Exp left, right;

@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 public class LabelList {
    public Label head;

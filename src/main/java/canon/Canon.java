@@ -1,9 +1,9 @@
-package canon;
+package Canon;
 
-import temp.Temp;
-import tree.*;
+import Temp.Temp;
+import Tree.*;
 
-class MoveCall extends tree.Stm {
+class MoveCall extends Tree.Stm {
   TEMP dst;
   CALL src;
   MoveCall(TEMP d, CALL s) {dst=d; src=s;}
@@ -13,7 +13,7 @@ class MoveCall extends tree.Stm {
   }
 }   
   
-class ExpCall extends tree.Stm {
+class ExpCall extends Tree.Stm {
   CALL call;
   ExpCall(CALL c) {call=c;}
   public ExpList kids() {return call.kids();}

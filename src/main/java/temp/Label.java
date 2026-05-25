@@ -1,4 +1,4 @@
-package temp;
+package Temp;
 
 import symbol.Symbol;
 

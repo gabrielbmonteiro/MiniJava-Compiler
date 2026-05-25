@@ -1,4 +1,4 @@
-package tree;
+package Tree;
 
 public class CALL extends Exp {
   public Exp func;
