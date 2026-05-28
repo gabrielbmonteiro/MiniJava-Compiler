@@ -2,7 +2,7 @@
 
 Este repositório contém o projeto de implementação de um compilador completo para a linguagem **MiniJava**, tendo como código alvo a arquitetura **MIPS**. 
 
-O desenvolvimento deste compilador faz parte do critério de avaliação da disciplina de Compiladores, sendo projetado, estruturado e codificado por uma equipe composta por exatamente **3 alunos**.
+O desenvolvimento deste compilador faz parte do critério de avaliação da disciplina de Compiladores, sendo projetado, estruturado e codificado por mim.
 
 ---
 
