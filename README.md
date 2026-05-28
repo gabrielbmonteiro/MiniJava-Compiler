@@ -20,23 +20,23 @@ A construção e avaliação do compilador foram divididas rigorosamente em **5 
 
 ### 🔍 N1: Analisador Léxico e Sintático
 * **Objetivo:** Ler o código-fonte em MiniJava, agrupar os caracteres em *tokens* válidos (Análise Léxica) e validar a estrutura gramatical da linguagem (Análise Sintática).
-* **Branch recomendada:** `[n1-analisador-lexico-sintatico]`
+* **Branch:** `[n1-analisador-lexico-sintatico]`
 
 ### 🌳 N2: Árvore Sintática Abstrata (AST) e Análise Semântica
 * **Objetivo:** Construir a representação estrutural do código (AST) e realizar a checagem de tipos, validação de escopo, declaração de variáveis e verificação de regras semânticas da linguagem orientada a objetos.
-* **Branch recomendada:** `[n2-AST-e-analisador-semantico]`
+* **Branch:** `[n2-AST-e-analisador-semantico]`
 
 ### ⚙️ N3: Tradução para o Código Intermediário (IR)
 * **Objetivo:** Converter a Árvore Sintática Abstrata (AST) validada em uma Representação Intermediária (IR Tree) de baixo nível, independente da arquitetura final, facilitando otimizações.
-* **Branch recomendada:** `[n3-traducao-codigo-intermediario]`
+* **Branch:** `[n3-traducao-codigo-intermediario]`
 
 ### 🎯 N4: Seleção de Instruções
 * **Objetivo:** Mapear os nós da Árvore de Representação Intermediária (IR) para instruções reais do conjunto de instruções da arquitetura **MIPS** (*Assembly MIPS*).
-* **Branch recomendada:** `[n4-selecao-instrucoes]`
+* **Branch:** `[n4-selecao-instrucoes]`
 
 ### 🗄️ N5: Alocação de Registradores
 * **Objetivo:** Substituir os registradores temporários infinitos gerados na etapa anterior por registradores físicos reais da máquina MIPS, utilizando algoritmos de coloração de grafos de interferência e tratamento de *spills* (vazamentos de memória).
-* **Branch recomendada:** `[n5-alocacao-registradores]`
+* **Branch:** `[n5-alocacao-registradores]`
 
 ---
 
