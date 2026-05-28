@@ -33,8 +33,6 @@ As principais barreiras técnicas superadas nesta etapa foram:
 
 ### 5. Participação da Equipe
 * **Gabriel Batista Monteiro:** Responsável pela implementação completa da classe `Codegen.java`, mapeamento da arquitetura de registradores MIPS no MipsFrame (`calldefs`, `$a0-$a3`), implementação de "View Shift" via `procEntryExit1` e "Liveness Sink" via `procEntryExit2`, resolução de passagens de parâmetros longos (>4 args) via Pilha, e integração do pacote `Canon` no loop principal.
-* **Albert Moren Paulino da Anunciação:** Responsável pela validação técnica de operações de memória e fluxo, desenvolvendo os testes de aritmética de ponteiros para alocação de vetores (SucessoArrayAssign.java) e certificando o funcionamento da Canonização em blocos lineares e aninhamentos (SucessoFatorial.java e SucessoDanglingElse.java).
-* **Antônio Kevin Carvalho Primo:** Responsável por solucionar a dificuldade de legibilidade do código de máquina gerado, implementando a interface TempMap no MipsFrame acoplada ao CombineMap e pela validação de orientação a objetos no Assembly, garantindo que as chamadas polimórficas utilizem corretamente a navegação em VTable com lw encadeados e jalr (SucessoHeranca.java e TesteN3Polimorfismo.java).
 
 ## 🚀 Como Executar o Projeto
 
